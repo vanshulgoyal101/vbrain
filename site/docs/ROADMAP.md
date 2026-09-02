@@ -37,7 +37,7 @@ in docs, not memory.
 - **Graph view** — in-UI force-directed map of the note link-graph (click to open).
 - **Inline edit** — edit a note in the UI and commit it to the private repo
   (optional, `GITHUB_WRITE_TOKEN`-gated).
-- **Tests** — 136 Vitest unit tests (incl. real JWT verification + MCP + router + edit + PR + recent + search engine).
+- **Tests** — 170 Vitest unit tests (real JWT verification + MCP + router + edit + PR + recent + search engine + SSG); ~98% coverage (`npm run test:coverage`).
 - **Recently changed** — `/api/recent` GitHub-commits feed + a "Recently changed" view.
 - **Daily briefing** — deterministic `#/briefing` view (focus + next moves + open
   tensions + recent changes + inbox), assembled from the notes themselves.
@@ -48,6 +48,13 @@ in docs, not memory.
 - **Offline PWA** — installable app with a service worker that caches the **app
   shell only** (never `/api` content), so it loads offline without persisting
   private data. See [SECURITY.md](SECURITY.md).
+- **Public SEO site (SSG)** — a static export of the notes for the *public* brain
+  (vbrain.vanshul.com): an indexable page per note (canonical, Open Graph,
+  `TechArticle` + `BreadcrumbList` JSON-LD), a landing page, `sitemap.xml`,
+  `robots.txt`, Cloudflare Pages `_headers`, clean URLs, skip link + single-H1
+  a11y. `npm run build:site`. See [PUBLIC-SITE.md](PUBLIC-SITE.md).
+- **Engine sync** — `scripts/sync-engine.mjs` keeps the shared engine identical
+  across the public (canonical) and private brains. See [scripts/README](../../scripts/README.md).
 
 ## Proposed / potential
 
@@ -59,7 +66,9 @@ in docs, not memory.
 
 ## Explicit non-goals
 
-- **Public SEO / indexing** — the site is private by design; being unfindable is
-  correct. See [SECURITY.md](SECURITY.md).
+- **Public SEO on the *private* brain** — brain.vanshul.com is auth-gated and
+  intentionally `noindex`; being unfindable is correct. (The separate *public*
+  demo site at vbrain.vanshul.com **is** fully SEO-optimized — see the SSG above.)
+  See [SECURITY.md](SECURITY.md).
 - **Multi-user / sharing** — single-user tool; no accounts, roles, or ACLs beyond
   the one allowed email.
