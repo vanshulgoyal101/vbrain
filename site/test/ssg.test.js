@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   urlForPath, filePathFor, escapeHtml, metaDescription, pageTitle, rewriteLinks, stripLeadingH1,
   renderRobots, renderHeaders, renderSitemap, breadcrumbJsonLd, articleJsonLd, htmlShell,
-  urlForSection, filePathForSection, sectionGroups, renderFeed,
+  urlForSection, filePathForSection, sectionGroups, renderFeed, addHeadingIds, tocHtml,
 } from '../src/ssg.js';
 
 const BASE = 'https://vbrain.example.com';
@@ -132,8 +132,38 @@ describe('section hubs', () => {
   });
 });
 
-describe('renderFeed', () => {
-  const xml = renderFeed(
+describe('addHeadingIds', () => {
+  it('slugs h2/h3 so sections are deep-linkable', () => {
+    const out = addHeadingIds('<h2>Testing &amp; CI</h2><p>x</p><h3>Why it matters</h3>');
+    expect(out).toContain('<h2 id="testing-ci">');
+    expect(out).toContain('<h3 id="why-it-matters">');
+  });
+  it('leaves other headings and inline markup alone', () => {
+    const out = addHeadingIds('<h1>Title</h1><h2>A <code>b</code></h2>');
+    expect(out).toContain('<h1>Title</h1>');
+    expect(out).toContain('<code>b</code>');
+  });
+  it('de-duplicates repeated headings', () => {
+    const out = addHeadingIds('<h2>Notes</h2><h2>Notes</h2>');
+    expect(out).toContain('id="notes"');
+    expect(out).toContain('id="notes-2"');
+  });
+});
+
+describe('tocHtml', () => {
+  const body = addHeadingIds(['One', 'Two', 'Three', 'Four'].map((h) => `<h2>${h}</h2>`).join(''));
+  it('builds a linked contents list once there are enough headings', () => {
+    const toc = tocHtml(body);
+    expect(toc).toContain('<summary>On this page</summary>');
+    expect(toc).toContain('<a href="#one">One</a>');
+    expect(toc).toContain('<a href="#four">Four</a>');
+  });
+  it('is empty for short notes', () => {
+    expect(tocHtml(addHeadingIds('<h2>Only</h2>'))).toBe('');
+  });
+});
+
+describe('renderFeed', () => {  const xml = renderFeed(
     [{ url: BASE + '/now', title: 'Now & Then', description: 'Current focus', date: '2026-09-02T10:00:00Z' }],
     { base: BASE, siteName: 'vbrain', description: 'A second brain' },
   );

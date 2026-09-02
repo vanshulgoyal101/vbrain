@@ -3,7 +3,7 @@
 // the file reads/writes and markdown rendering. This lets a brain export itself as
 // a fast, fully-indexable static site (each note becomes its own HTML page).
 
-import { sectionOf, titleOf, resolvePath, escapeHtml } from '../public/lib.js';
+import { sectionOf, titleOf, resolvePath, escapeHtml, slugify } from '../public/lib.js';
 
 // Re-exported so the SSG has one obvious import surface (and one escaper).
 export { escapeHtml };
@@ -83,6 +83,43 @@ export function rewriteLinks(html, fromPath) {
 // (the hero), so rendering the README's H1 too would create a second page H1.
 export function stripLeadingH1(md) {
   return (md || '').replace(/^\s*#\s+.*(?:\r?\n)+/, '');
+}
+
+// Rendered HTML → the heading's plain text. Tags go, then entities are decoded so
+// slugs match the app's client-side `textContent` behaviour ("A &amp; B" → "a-b").
+function headingText(inner) {
+  return String(inner)
+    .replace(/<[^>]*>/g, '')
+    .replace(/&(amp|lt|gt|quot|#39|apos|nbsp);/g, (m, e) => (
+      { amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'", apos: "'", nbsp: ' ' }[e]
+    ))
+    .replace(/&#(\d+);/g, (m, d) => String.fromCharCode(Number(d)))
+    .trim();
+}
+
+// Give every h2/h3 a stable id so sections are deep-linkable (and eligible for
+// "jump to section" links in search results). Duplicate slugs get -2, -3, …
+// Mirrors the app's client-side addHeadingIds so both surfaces agree.
+export function addHeadingIds(html) {
+  const used = new Map();
+  return String(html || '').replace(/<h([23])>([\s\S]*?)<\/h\1>/g, (m, level, inner) => {
+    const base = slugify(headingText(inner));
+    if (!base) return m;
+    const n = (used.get(base) || 0) + 1;
+    used.set(base, n);
+    const id = n === 1 ? base : `${base}-${n}`;
+    return `<h${level} id="${escapeHtml(id)}">${inner}</h${level}>`;
+  });
+}
+
+// A "On this page" ToC from the h2s that addHeadingIds just tagged. Returns ''
+// for short notes, where a ToC is just noise.
+export function tocHtml(html, min = 4) {
+  const heads = [...String(html || '').matchAll(/<h2 id="([^"]+)">([\s\S]*?)<\/h2>/g)]
+    .map((m) => ({ id: m[1], text: headingText(m[2]) }));
+  if (heads.length < min) return '';
+  const items = heads.map((h) => `<li><a href="#${escapeHtml(h.id)}">${escapeHtml(h.text)}</a></li>`).join('');
+  return `<details class="toc"><summary>On this page</summary><ul>${items}</ul></details>`;
 }
 
 // robots.txt — public site is fully indexable and points at the sitemap. The

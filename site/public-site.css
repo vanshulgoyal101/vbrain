@@ -81,6 +81,12 @@ img, svg { max-width: 100%; height: auto; }
 .siblings h2 { font-size: 1rem; color: var(--muted); border: 0; padding: 0; margin: 0 0 .5rem; }
 .siblings ul { margin: 0; padding-left: 1.1rem; }
 
+.toc { border: 1px solid var(--line); border-radius: 10px; background: var(--panel);
+  padding: .6rem .9rem; margin: 0 0 1.5rem; }
+.toc summary { cursor: pointer; color: var(--muted); font-size: .9rem; }
+.toc ul { margin: .6rem 0 .2rem; padding-left: 1.1rem; }
+.toc li { margin: .2rem 0; }
+
 footer.site-foot { border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; padding: 2rem 0; }
 footer.site-foot .wrap { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; }
 

@@ -18,7 +18,7 @@ import { titleOf, sectionOf, graphData } from './public/lib.js';
 import {
   urlForPath, filePathFor, escapeHtml, metaDescription, pageTitle, rewriteLinks, stripLeadingH1,
   renderRobots, renderHeaders, renderSitemap, breadcrumbJsonLd, articleJsonLd, htmlShell,
-  urlForSection, filePathForSection, sectionGroups, renderFeed,
+  urlForSection, filePathForSection, sectionGroups, renderFeed, addHeadingIds, tocHtml,
 } from './src/ssg.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -76,7 +76,8 @@ const foot = () => `<footer class="site-foot"><div class="wrap"><span>${escapeHt
 // ── render one note page ─────────────────────────────────────────────────────
 function renderNote(path) {
   const md = files[path];
-  const body = rewriteLinks(marked.parse(md), path);
+  const body = addHeadingIds(rewriteLinks(marked.parse(md), path));
+  const toc = tocHtml(body);
   const back = (inbound.get(path) || []).sort();
   const backHtml = back.length
     ? `<nav class="backlinks"><h2>Linked from</h2><ul>${back.map((b) => `<li><a href="${escapeHtml(urlForPath(b))}">${escapeHtml(titleOf(files[b], b))}</a></li>`).join('')}</ul></nav>`
@@ -88,7 +89,7 @@ function renderNote(path) {
     ? `<nav class="siblings"><h2>More in ${escapeHtml(titleCase(sec))}</h2><ul>${siblings.map((s) => `<li><a href="${escapeHtml(urlForPath(s))}">${escapeHtml(titleOf(files[s], s))}</a></li>`).join('')}</ul></nav>`
     : '';
   const crumbs = `<nav class="crumbs wrap" aria-label="Breadcrumb"><a href="/">${escapeHtml(SITE_NAME)}</a>${sec ? ` › <a href="${escapeHtml(urlForSection(sec))}">${escapeHtml(titleCase(sec))}</a>` : ''} › ${escapeHtml(titleOf(md, path))}</nav>`;
-  const bodyHtml = `${nav()}${crumbs}<main id="main" class="wrap prose"><article>${body}</article>${siblingHtml}${backHtml}</main>${foot()}`;
+  const bodyHtml = `${nav()}${crumbs}<main id="main" class="wrap prose">${toc}<article>${body}</article>${siblingHtml}${backHtml}</main>${foot()}`;
   return htmlShell({
     title: pageTitle(md, path, SITE_NAME),
     description: metaDescription(md),

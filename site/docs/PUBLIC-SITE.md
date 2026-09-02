@@ -55,6 +55,11 @@ avoid duplicate-content mismatches. Files are still written as `.html` on disk.
   (first and last commit touching the file), and feed `<lastmod>` in the sitemap.
   Falls back to file mtime when no git history is available.
 - `og:type` is `article` on notes (with `article:modified_time`), `website` elsewhere.
+- **Deep-linkable sections**: every `h2`/`h3` gets a stable slug id (duplicates get
+  `-2`, `-3`, …), so sections can be linked directly and are eligible for "jump to
+  section" links in search results. Notes with 4+ `h2`s also get an "On this page"
+  table of contents. Ids match the app's client-side ones (same `slugify`, and HTML
+  entities are decoded first) so a link works on both surfaces.
 - Semantic HTML (`header`/`main`/`article`/`nav`/`footer`), a "Linked from" backlinks
   section, a "More in ‹section›" sibling list, and breadcrumbs — internal linking
   that search engines reward, and no note is a dead end.
