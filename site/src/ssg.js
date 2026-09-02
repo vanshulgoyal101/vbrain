@@ -5,10 +5,17 @@
 
 import { sectionOf, titleOf, resolvePath } from '../public/lib.js';
 
-// A note path → the site URL path. README.md is the home page ("/").
+// A note path → the site URL (clean, no .html — Cloudflare Pages serves and
+// prefers extensionless URLs). README.md is the home page ("/").
 export function urlForPath(path) {
   if (path === 'README.md') return '/';
-  return '/' + path.replace(/\.md$/, '.html');
+  return '/' + path.replace(/\.md$/, '');
+}
+
+// A note path → its on-disk output file (what the SSG writes). README is the
+// landing index; every other note is `<path>.html`.
+export function filePathFor(path) {
+  return path === 'README.md' ? 'index.html' : path.replace(/\.md$/, '.html');
 }
 
 // Escape text for safe inclusion in HTML/attributes.
@@ -56,6 +63,25 @@ export function rewriteLinks(html, fromPath) {
 // robots.txt — public site is fully indexable and points at the sitemap.
 export function renderRobots(base) {
   return `User-agent: *\nAllow: /\n\nSitemap: ${base}/sitemap.xml\n`;
+}
+
+// Cloudflare Pages `_headers` — strict security headers site-wide (the static
+// pages run zero client JS, so script-src can be 'none') + asset caching.
+export function renderHeaders() {
+  return [
+    '/*',
+    '  X-Content-Type-Options: nosniff',
+    '  Referrer-Policy: no-referrer',
+    '  X-Frame-Options: DENY',
+    "  Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'",
+    '  Permissions-Policy: geolocation=(), microphone=(), camera=()',
+    '',
+    '/*.css',
+    '  Cache-Control: public, max-age=86400',
+    '/*.svg',
+    '  Cache-Control: public, max-age=86400',
+    '',
+  ].join('\n');
 }
 
 // sitemap.xml from a list of { path, lastmod? }.

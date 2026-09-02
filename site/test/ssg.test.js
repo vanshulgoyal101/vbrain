@@ -1,16 +1,23 @@
 import { describe, it, expect } from 'vitest';
 import {
-  urlForPath, escapeHtml, metaDescription, pageTitle, rewriteLinks,
-  renderRobots, renderSitemap, breadcrumbJsonLd, articleJsonLd, htmlShell,
+  urlForPath, filePathFor, escapeHtml, metaDescription, pageTitle, rewriteLinks,
+  renderRobots, renderHeaders, renderSitemap, breadcrumbJsonLd, articleJsonLd, htmlShell,
 } from '../src/ssg.js';
 
 const BASE = 'https://vbrain.example.com';
 
 describe('urlForPath', () => {
-  it('maps README to home and notes to .html', () => {
+  it('maps README to home and notes to clean URLs (no .html)', () => {
     expect(urlForPath('README.md')).toBe('/');
-    expect(urlForPath('projects/pixelpaws.md')).toBe('/projects/pixelpaws.html');
-    expect(urlForPath('now.md')).toBe('/now.html');
+    expect(urlForPath('projects/pixelpaws.md')).toBe('/projects/pixelpaws');
+    expect(urlForPath('now.md')).toBe('/now');
+  });
+});
+
+describe('filePathFor', () => {
+  it('writes README to index.html and notes to <path>.html', () => {
+    expect(filePathFor('README.md')).toBe('index.html');
+    expect(filePathFor('projects/pixelpaws.md')).toBe('projects/pixelpaws.html');
   });
 });
 
@@ -47,7 +54,7 @@ describe('pageTitle', () => {
 describe('rewriteLinks', () => {
   it('rewrites relative .md links to static URLs', () => {
     const html = 'see <a href="../now.md">now</a>';
-    expect(rewriteLinks(html, 'projects/x.md')).toContain('href="/now.html"');
+    expect(rewriteLinks(html, 'projects/x.md')).toContain('href="/now"');
   });
   it('marks external links noopener + target', () => {
     const out = rewriteLinks('<a href="https://x.com">x</a>', 'README.md');
@@ -68,12 +75,22 @@ describe('renderRobots', () => {
   });
 });
 
+describe('renderHeaders', () => {
+  it('sets strict security headers and script-src none', () => {
+    const h = renderHeaders();
+    expect(h).toContain('/*');
+    expect(h).toContain('X-Content-Type-Options: nosniff');
+    expect(h).toContain("script-src 'none'");
+    expect(h).toContain('Cache-Control: public, max-age=86400');
+  });
+});
+
 describe('renderSitemap', () => {
   it('emits a loc per entry with home priority 1.0', () => {
     const xml = renderSitemap([{ path: 'README.md' }, { path: 'now.md', lastmod: '2026-09-02' }], BASE);
     expect(xml).toContain('xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"');
     expect(xml).toContain(`<loc>${BASE}/</loc>`);
-    expect(xml).toContain(`<loc>${BASE}/now.html</loc>`);
+    expect(xml).toContain(`<loc>${BASE}/now</loc>`);
     expect(xml).toContain('<lastmod>2026-09-02</lastmod>');
     expect(xml).toContain('<priority>1.0</priority>');
   });
@@ -84,8 +101,7 @@ describe('JSON-LD', () => {
     const ld = breadcrumbJsonLd('projects/pixelpaws.md', '# PixelPaws\n> x', BASE, 'vbrain');
     const names = ld.itemListElement.map((i) => i.name);
     expect(names).toEqual(['vbrain', 'projects', 'PixelPaws']);
-  });
-  it('article carries headline + author + description', () => {
+  });  it('article carries headline + author + description', () => {
     const ld = articleJsonLd('now.md', '# Now\n> **TL;DR** — current focus.', BASE, 'vbrain', 'Alex');
     expect(ld['@type']).toBe('TechArticle');
     expect(ld.headline).toBe('Now');

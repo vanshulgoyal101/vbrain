@@ -29,10 +29,15 @@ index.html            landing page (hero + features + note index)
 <note>.html           one indexable page per note (nested by folder)
 sitemap.xml           all pages, sitemaps.org 0.9 schema
 robots.txt            allow all + sitemap reference
+_headers              Cloudflare Pages security headers + asset caching
 og.svg                1200×630 social image
 site.css              public-site stylesheet
 brain.svg             favicon/logo
 ```
+
+URLs are **clean** (no `.html`) — Cloudflare Pages serves `foo.html` at `/foo`, so
+canonicals, internal links, and the sitemap all use the extensionless form to
+avoid duplicate-content mismatches. Files are still written as `.html` on disk.
 
 ## What each page ships (SEO)
 
@@ -62,5 +67,7 @@ brain.svg             favicon/logo
 
 - The OG image is an SVG. Some crawlers prefer PNG; a rasterized `og.png` is a
   potential upgrade (needs an image lib).
-- Clean URLs (`/projects/pixelpaws` without `.html`) are possible via Pages
-  redirects; `.html` is fully indexable and kept for simplicity.
+- Section index pages (`/projects/`) are a potential add; section READMEs are
+  currently served at `/projects/README`.
+- The static pages ship **zero client JS**, so `_headers` sets `script-src 'none'`;
+  JSON-LD is inline data (crawlers read it from source regardless).

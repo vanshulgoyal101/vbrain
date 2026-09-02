@@ -15,8 +15,8 @@ import { fileURLToPath } from 'node:url';
 import { marked } from 'marked';
 import { titleOf, sectionOf, graphData } from './public/lib.js';
 import {
-  urlForPath, escapeHtml, metaDescription, pageTitle, rewriteLinks,
-  renderRobots, renderSitemap, breadcrumbJsonLd, articleJsonLd, htmlShell,
+  urlForPath, filePathFor, escapeHtml, metaDescription, pageTitle, rewriteLinks,
+  renderRobots, renderHeaders, renderSitemap, breadcrumbJsonLd, articleJsonLd, htmlShell,
 } from './src/ssg.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -126,13 +126,14 @@ mkdirSync(OUT, { recursive: true });
 
 for (const p of paths) {
   if (p === 'README.md') continue;
-  const outPath = join(OUT, urlForPath(p).replace(/^\//, ''));
+  const outPath = join(OUT, filePathFor(p));
   mkdirSync(dirname(outPath), { recursive: true });
   writeFileSync(outPath, renderNote(p));
 }
 writeFileSync(join(OUT, 'index.html'), renderLanding());
 writeFileSync(join(OUT, 'sitemap.xml'), renderSitemap(paths.map((p) => ({ path: p })), SITE_URL));
 writeFileSync(join(OUT, 'robots.txt'), renderRobots(SITE_URL));
+writeFileSync(join(OUT, '_headers'), renderHeaders());
 writeFileSync(join(OUT, 'og.svg'), ogSvg());
 copyFileSync(join(HERE, 'public-site.css'), join(OUT, 'site.css'));
 copyFileSync(join(HERE, 'public', 'brain.svg'), join(OUT, 'brain.svg'));
