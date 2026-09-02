@@ -31,7 +31,9 @@ index.html            landing page (hero + features + note index)
 404.html              real 404 (Pages serves it with a 404 status)
 sitemap.xml           all pages + hubs, sitemaps.org 0.9 schema, with lastmod
 feed.xml              RSS 2.0 of the 25 most recently updated notes
-robots.txt            allow all + sitemap reference
+llms.txt              AI-crawler index (copied from the repo root)
+llms-full.txt         AI-crawler full text (copied from the repo root)
+robots.txt            allow all + sitemap reference + llms.txt pointer
 _headers              Cloudflare Pages security headers + asset caching
 og.svg                1200×630 social image
 site.css              public-site stylesheet

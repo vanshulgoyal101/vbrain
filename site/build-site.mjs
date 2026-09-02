@@ -9,7 +9,7 @@
 //
 // Pure logic lives in src/ssg.js (unit-tested); this file only does IO + Markdown.
 
-import { readFileSync, readdirSync, statSync, mkdirSync, writeFileSync, rmSync, copyFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, mkdirSync, writeFileSync, rmSync, copyFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, dirname, resolve, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -227,5 +227,13 @@ writeFileSync(join(OUT, '_headers'), renderHeaders());
 writeFileSync(join(OUT, 'og.svg'), ogSvg());
 copyFileSync(join(HERE, 'public-site.css'), join(OUT, 'site.css'));
 copyFileSync(join(HERE, 'public', 'brain.svg'), join(OUT, 'brain.svg'));
+
+// llms.txt / llms-full.txt — the emerging convention for AI crawlers. They're
+// generated into the repo root by scripts/gen-llms.mjs; serve them at the site
+// root so agents can find the brain without scraping HTML.
+for (const f of ['llms.txt', 'llms-full.txt']) {
+  const src = join(ROOT, f);
+  if (existsSync(src)) copyFileSync(src, join(OUT, f));
+}
 
 console.log(`✅ built ${paths.length} pages + ${SECTIONS.size} section hubs → ${relative(process.cwd(), OUT)}  (site: ${SITE_URL})`);

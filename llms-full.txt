@@ -859,6 +859,22 @@ file via the UI's **File into note** button or by editing the note. Creds: env
 `../arcade/.env`) to reveal the service key. See the **drain-inbox** ritual in
 [../RITUALS.md](../RITUALS.md).
 
+## sync-engine.mjs — keep the two brains' engine in sync
+
+The public `vbrain` repo is the **canonical engine**; the private `vbrain-private`
+consumes it. This copies the shared, identity-free engine modules (Worker `src/*`,
+`public/lib.js`, `sw.js`, `styles.css`, the validator/graph/doctor/new-note/
+drain-inbox scripts) into the private repo.
+
+```bash
+node scripts/sync-engine.mjs            # preview (dry-run) vs ../vbrain-private
+node scripts/sync-engine.mjs --apply    # write, then test + commit in the target
+```
+
+Config/identity/public-only files (`wrangler.toml`, `mcp.js`, `gen-llms.mjs`,
+`pack.mjs`, the SSG, `docs/`, tests, notes) are **not** synced — they legitimately
+differ per repo. The script lists them in its header.
+
 ## When to run
 
 - **After adding or editing** any note (catches broken links / missing TL;DR / thin content).

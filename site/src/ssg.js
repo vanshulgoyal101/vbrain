@@ -85,9 +85,10 @@ export function stripLeadingH1(md) {
   return (md || '').replace(/^\s*#\s+.*(?:\r?\n)+/, '');
 }
 
-// robots.txt — public site is fully indexable and points at the sitemap.
+// robots.txt — public site is fully indexable and points at the sitemap. The
+// llms.txt pointer is a comment: it's not a robots directive, just discovery.
 export function renderRobots(base) {
-  return `User-agent: *\nAllow: /\n\nSitemap: ${base}/sitemap.xml\n`;
+  return `User-agent: *\nAllow: /\n\nSitemap: ${base}/sitemap.xml\n\n# AI agents: ${base}/llms.txt (index) and ${base}/llms-full.txt (full text)\n`;
 }
 
 // Cloudflare Pages `_headers` — strict security headers site-wide (the static

@@ -80,6 +80,9 @@ describe('renderRobots', () => {
     expect(r).toContain('Allow: /');
     expect(r).toContain(`Sitemap: ${BASE}/sitemap.xml`);
   });
+  it('points AI agents at llms.txt', () => {
+    expect(renderRobots(BASE)).toContain(`${BASE}/llms.txt`);
+  });
 });
 
 describe('renderHeaders', () => {

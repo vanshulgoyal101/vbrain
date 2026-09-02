@@ -60,7 +60,7 @@ jobs:
         working-directory: site
         run: |
           set -e
-          for f in dist/index.html dist/404.html dist/sitemap.xml dist/robots.txt dist/feed.xml dist/_headers; do
+          for f in dist/index.html dist/404.html dist/sitemap.xml dist/robots.txt dist/feed.xml dist/_headers dist/llms.txt; do
             test -s "$f" || { echo "missing or empty: $f"; exit 1; }
           done
           grep -q '<lastmod>' dist/sitemap.xml || { echo "sitemap has no lastmod"; exit 1; }
