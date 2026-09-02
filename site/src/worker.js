@@ -1,4 +1,4 @@
-// brain.example.com — private second-brain backend (Cloudflare Worker).
+// The brain's private second-brain backend (Cloudflare Worker).
 //
 // Security:
 //   1. The browser signs in via Supabase Google OAuth and sends the access token

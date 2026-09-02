@@ -101,4 +101,4 @@ for (const c of plan) {
   }
   console.log('');
 }
-console.log('File them at brain.example.com/#/inbox (writes need GITHUB_WRITE_TOKEN), or edit the note directly.\n');
+console.log('File them in the brain UI inbox (#/inbox; writes need GITHUB_WRITE_TOKEN), or edit the note directly.\n');
