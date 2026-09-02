@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   urlForPath, filePathFor, escapeHtml, metaDescription, pageTitle, rewriteLinks, stripLeadingH1,
   renderRobots, renderHeaders, renderSitemap, breadcrumbJsonLd, articleJsonLd, htmlShell,
+  urlForSection, filePathForSection, sectionGroups, renderFeed,
 } from '../src/ssg.js';
 
 const BASE = 'https://vbrain.example.com';
@@ -109,6 +110,44 @@ describe('renderSitemap', () => {
     expect(xml).toContain('<lastmod>2026-09-02</lastmod>');
     expect(xml).toContain('<priority>1.0</priority>');
   });
+  it('accepts an explicit url + priority (section hubs)', () => {
+    const xml = renderSitemap([{ url: '/projects/', priority: '0.5' }], BASE);
+    expect(xml).toContain(`<loc>${BASE}/projects/</loc>`);
+    expect(xml).toContain('<priority>0.5</priority>');
+  });
+});
+
+describe('section hubs', () => {
+  it('maps a section to its URL and output file', () => {
+    expect(urlForSection('projects')).toBe('/projects/');
+    expect(filePathForSection('projects')).toBe('projects/index.html');
+  });
+  it('groups note paths by section, skipping root notes', () => {
+    const g = sectionGroups(['README.md', 'now.md', 'projects/b.md', 'projects/a.md', 'learnings/x.md']);
+    expect([...g.keys()].sort()).toEqual(['learnings', 'projects']);
+    expect(g.get('projects')).toEqual(['projects/a.md', 'projects/b.md']); // sorted
+  });
+});
+
+describe('renderFeed', () => {
+  const xml = renderFeed(
+    [{ url: BASE + '/now', title: 'Now & Then', description: 'Current focus', date: '2026-09-02T10:00:00Z' }],
+    { base: BASE, siteName: 'vbrain', description: 'A second brain' },
+  );
+  it('is valid RSS with a self link and an item', () => {
+    expect(xml).toContain('<rss version="2.0"');
+    expect(xml).toContain(`<atom:link href="${BASE}/feed.xml" rel="self"`);
+    expect(xml).toContain(`<link>${BASE}/now</link>`);
+    expect(xml).toContain('<guid isPermaLink="true">');
+  });
+  it('escapes titles and emits an RFC-822 pubDate', () => {
+    expect(xml).toContain('<title>Now &amp; Then</title>');
+    expect(xml).toMatch(/<pubDate>\w{3}, \d{2} \w{3} \d{4}/);
+  });
+  it('omits pubDate when the date is unknown', () => {
+    const noDate = renderFeed([{ url: BASE + '/x', title: 'X', description: 'd' }], { base: BASE, siteName: 's', description: 'd' });
+    expect(noDate).not.toContain('<pubDate>');
+  });
 });
 
 describe('JSON-LD', () => {
@@ -121,6 +160,12 @@ describe('JSON-LD', () => {
     expect(ld['@type']).toBe('TechArticle');
     expect(ld.headline).toBe('Now');
     expect(ld.author.name).toBe('Alex');
+    expect(ld.dateModified).toBeUndefined(); // omitted when unknown
+  });
+  it('article includes git dates when provided', () => {
+    const ld = articleJsonLd('now.md', '# Now', BASE, 'vbrain', 'Alex', { published: '2026-01-01T00:00:00Z', modified: '2026-09-02T00:00:00Z' });
+    expect(ld.datePublished).toBe('2026-01-01T00:00:00Z');
+    expect(ld.dateModified).toBe('2026-09-02T00:00:00Z');
   });
 });
 
@@ -143,5 +188,19 @@ describe('htmlShell', () => {
   it('can emit noindex', () => {
     expect(htmlShell({ title: 'T', description: 'D', canonical: BASE, base: BASE, bodyHtml: '', indexable: false }))
       .toContain('noindex, nofollow');
+  });
+  it('defaults og:type to website and can switch to article with a modified time', () => {
+    expect(doc).toContain('<meta property="og:type" content="website" />');
+    const art = htmlShell({
+      title: 'T', description: 'D', canonical: BASE, base: BASE, bodyHtml: '',
+      ogType: 'article', modified: '2026-09-02T00:00:00Z',
+    });
+    expect(art).toContain('<meta property="og:type" content="article" />');
+    expect(art).toContain('<meta property="article:modified_time" content="2026-09-02T00:00:00Z" />');
+  });
+  it('links the RSS feed only when given one', () => {
+    expect(doc).not.toContain('application/rss+xml');
+    expect(htmlShell({ title: 'T', description: 'D', canonical: BASE, base: BASE, bodyHtml: '', feedUrl: BASE + '/feed.xml' }))
+      .toContain(`<link rel="alternate" type="application/rss+xml" title="T" href="${BASE}/feed.xml" />`);
   });
 });

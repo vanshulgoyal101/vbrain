@@ -27,7 +27,10 @@ Output (`site/dist/`, gitignored):
 ```
 index.html            landing page (hero + features + note index)
 <note>.html           one indexable page per note (nested by folder)
-sitemap.xml           all pages, sitemaps.org 0.9 schema
+<section>/index.html  section hub ("/projects/") listing that section's notes
+404.html              real 404 (Pages serves it with a 404 status)
+sitemap.xml           all pages + hubs, sitemaps.org 0.9 schema, with lastmod
+feed.xml              RSS 2.0 of the 25 most recently updated notes
 robots.txt            allow all + sitemap reference
 _headers              Cloudflare Pages security headers + asset caching
 og.svg                1200×630 social image
@@ -44,9 +47,26 @@ avoid duplicate-content mismatches. Files are still written as `.html` on disk.
 - `<title>` = *Note title — vbrain*; unique `<meta name="description">` from the note's TL;DR.
 - `<link rel="canonical">`, Open Graph + Twitter Card tags, `theme-color`.
 - `index, follow` robots (vs. the private app's `noindex`).
-- **JSON-LD**: `TechArticle` + `BreadcrumbList` per note; `WebSite` + `SoftwareApplication` on the landing.
+- **JSON-LD**: `TechArticle` + `BreadcrumbList` per note; `WebSite` + `SoftwareApplication`
+  on the landing; `CollectionPage` + `BreadcrumbList` on each section hub.
+- **Freshness**: `datePublished`/`dateModified` come from the note's **git history**
+  (first and last commit touching the file), and feed `<lastmod>` in the sitemap.
+  Falls back to file mtime when no git history is available.
+- `og:type` is `article` on notes (with `article:modified_time`), `website` elsewhere.
 - Semantic HTML (`header`/`main`/`article`/`nav`/`footer`), a "Linked from" backlinks
-  section, and breadcrumbs — internal linking that search engines reward.
+  section, a "More in ‹section›" sibling list, and breadcrumbs — internal linking
+  that search engines reward, and no note is a dead end.
+
+## Crawlability
+
+Two things that are easy to get wrong on a static host, both handled here:
+
+- **No soft 404s.** Without a `404.html`, Cloudflare Pages answers unknown URLs with
+  the landing page at HTTP 200 — search engines see infinite duplicate pages. The
+  generator emits a real `404.html` (noindex), which Pages serves with a 404 status.
+- **Breadcrumbs point at real pages.** The `BreadcrumbList` links `/projects/`, so
+  every section gets a genuine hub page (also listed in the sitemap) instead of a
+  crumb that resolves to a soft 404.
 
 ## Architecture
 

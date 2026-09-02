@@ -77,6 +77,10 @@ img, svg { max-width: 100%; height: auto; }
 .backlinks { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--line); }
 .backlinks h2 { font-size: 1rem; color: var(--muted); border: 0; padding: 0; margin: 0 0 .5rem; }
 
+.siblings { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.siblings h2 { font-size: 1rem; color: var(--muted); border: 0; padding: 0; margin: 0 0 .5rem; }
+.siblings ul { margin: 0; padding-left: 1.1rem; }
+
 footer.site-foot { border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; padding: 2rem 0; }
 footer.site-foot .wrap { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; }
 
