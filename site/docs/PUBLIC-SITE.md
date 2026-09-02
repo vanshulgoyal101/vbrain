@@ -105,7 +105,20 @@ One-time setup — add these in the GitHub repo settings:
 |------|------|-------|
 | Secret | `CLOUDFLARE_API_TOKEN` | API token with the **Cloudflare Pages: Edit** permission |
 | Secret | `CLOUDFLARE_ACCOUNT_ID` | your Cloudflare account ID |
-| Variable | `CF_PAGES_PROJECT` | Pages project name (optional; defaults to `vbrain`) |
+| Variable | `CF_PAGES_PROJECT` | Pages project name (defaults to `vbrain`) |
+
+The Pages project is **direct-upload** (`Git Provider: No` in
+`wrangler pages project list`) — it has no build configuration of its own and
+never rebuilds on a push by itself. That is exactly why deployment lives in CI:
+CI builds, verifies, then uploads `site/dist`. To publish by hand in a pinch:
+
+```bash
+cd site && SITE_URL=https://vbrain.vanshul.com npm run build:site
+CI=true npx wrangler pages deploy dist --project-name=vbrain --branch=main
+```
+
+> `CI=true` matters: without it `wrangler pages …` can block on an interactive
+> prompt and appear to hang.
 
 Until the token exists the job still builds and verifies the site, then logs a
 notice instead of publishing — so CI is never red just because deploys aren't
@@ -117,7 +130,7 @@ prebuilt `site/dist`.
 
 ### Two gotchas that silently break the deploy
 
-- **Don't publish by hand.** A one-off `wrangler pages deploy dist` publishes a
+- **Don't publish by hand as the normal path.** A one-off upload publishes a
   snapshot that never updates again; the site then drifts behind `main` with no
   error anywhere. If unknown URLs return the landing page at HTTP 200 instead of a
   404, you are looking at a stale deploy.
