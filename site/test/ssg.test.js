@@ -236,4 +236,10 @@ describe('htmlShell', () => {
     expect(htmlShell({ title: 'T', description: 'D', canonical: BASE, base: BASE, bodyHtml: '', feedUrl: BASE + '/feed.xml' }))
       .toContain(`<link rel="alternate" type="application/rss+xml" title="T" href="${BASE}/feed.xml" />`);
   });
+  it('advertises a raster OG image with dimensions (social platforms reject SVG)', () => {
+    expect(doc).toContain(`<meta property="og:image" content="${BASE}/og.png" />`);
+    expect(doc).toContain('<meta property="og:image:width" content="1200" />');
+    expect(doc).toContain('<meta property="og:image:height" content="630" />');
+    expect(doc).toContain('<meta property="og:image:alt" content="T" />');
+  });
 });

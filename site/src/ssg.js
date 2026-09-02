@@ -143,6 +143,8 @@ export function renderHeaders() {
     '  Cache-Control: public, max-age=86400',
     '/*.svg',
     '  Cache-Control: public, max-age=86400',
+    '/*.png',
+    '  Cache-Control: public, max-age=86400',
     '',
   ].join('\n');
 }
@@ -220,7 +222,7 @@ export function articleJsonLd(path, md, base, siteName, author, dates = {}) {
 
 // The full HTML document with SEO meta, Open Graph, Twitter, canonical, and any
 // JSON-LD blocks. `indexable=false` emits a noindex robots tag.
-export function htmlShell({ title, description, canonical, base, bodyHtml, jsonLd = [], ogImage = '/og.svg', indexable = true, themeColor = '#0c0d12', ogType = 'website', feedUrl = '', modified = '' }) {
+export function htmlShell({ title, description, canonical, base, bodyHtml, jsonLd = [], ogImage = '/og.png', indexable = true, themeColor = '#0c0d12', ogType = 'website', feedUrl = '', modified = '' }) {
   const ld = jsonLd.filter(Boolean).map((o) => `<script type="application/ld+json">${JSON.stringify(o)}</script>`).join('\n  ');
   const robots = indexable ? 'index, follow' : 'noindex, nofollow';
   const feed = feedUrl ? `\n  <link rel="alternate" type="application/rss+xml" title="${escapeHtml(title)}" href="${escapeHtml(feedUrl)}" />` : '';
@@ -241,6 +243,9 @@ export function htmlShell({ title, description, canonical, base, bodyHtml, jsonL
   <meta property="og:description" content="${escapeHtml(description)}" />
   <meta property="og:url" content="${escapeHtml(canonical)}" />
   <meta property="og:image" content="${escapeHtml(base + ogImage)}" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="${escapeHtml(title)}" />
   <meta property="og:site_name" content="${escapeHtml(base.replace(/^https?:\/\//, ''))}" />${mod}
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${escapeHtml(title)}" />

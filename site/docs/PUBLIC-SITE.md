@@ -35,7 +35,7 @@ llms.txt              AI-crawler index (copied from the repo root)
 llms-full.txt         AI-crawler full text (copied from the repo root)
 robots.txt            allow all + sitemap reference + llms.txt pointer
 _headers              Cloudflare Pages security headers + asset caching
-og.svg                1200×630 social image
+og.png                1200×630 social image (authored as SVG, rendered to PNG)
 site.css              public-site stylesheet
 brain.svg             favicon/logo
 ```
@@ -48,6 +48,10 @@ avoid duplicate-content mismatches. Files are still written as `.html` on disk.
 
 - `<title>` = *Note title — vbrain*; unique `<meta name="description">` from the note's TL;DR.
 - `<link rel="canonical">`, Open Graph + Twitter Card tags, `theme-color`.
+- **Social card**: `og:image` is a real **PNG** with `og:image:width/height/alt`.
+  The artwork is authored as SVG in `build-site.mjs` and rasterised at build time
+  with `@resvg/resvg-js` — X, LinkedIn, Facebook and Slack all refuse SVG preview
+  images, so an SVG `og:image` means no card renders at all.
 - `index, follow` robots (vs. the private app's `noindex`).
 - **JSON-LD**: `TechArticle` + `BreadcrumbList` per note; `WebSite` + `SoftwareApplication`
   on the landing; `CollectionPage` + `BreadcrumbList` on each section hub.

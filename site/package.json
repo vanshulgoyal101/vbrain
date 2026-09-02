@@ -12,6 +12,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "marked": "^14.1.4"
   },
   "devDependencies": {

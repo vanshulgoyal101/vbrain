@@ -14,6 +14,7 @@ import { execFileSync } from 'node:child_process';
 import { join, dirname, resolve, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { marked } from 'marked';
+import { Resvg } from '@resvg/resvg-js';
 import { titleOf, sectionOf, graphData } from './public/lib.js';
 import {
   urlForPath, filePathFor, escapeHtml, metaDescription, pageTitle, rewriteLinks, stripLeadingH1,
@@ -184,9 +185,15 @@ ${foot()}`;
   });
 }
 
-// ── OG image (SVG, 1200×630) ─────────────────────────────────────────────────
+// ── OG image ───────────────────────────────────────────────────────
+// Authored as SVG, shipped as PNG: X/LinkedIn/Facebook/Slack all refuse SVG for
+// preview images, so an SVG og:image means no social card at all.
 function ogSvg() {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630"><rect width="1200" height="630" fill="#0c0d12"/><g transform="translate(90,250)" fill="none" stroke="#3ddc97" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M60 10a30 30 0 1 0-60 1.25 40 40 0 0 0-25 57.7 40 40 0 0 0 5.6 65.8A40 40 0 1 0 60 120Z" transform="scale(1.1)"/></g><text x="240" y="300" fill="#e7e9ee" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="86" font-weight="700">${escapeHtml(SITE_NAME)}</text><text x="242" y="370" fill="#9aa3b2" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="36">Your second brain, as an engine.</text></svg>`;
+}
+
+function ogPng() {
+  return new Resvg(ogSvg(), { fitTo: { mode: 'width', value: 1200 }, font: { loadSystemFonts: true } }).render().asPng();
 }
 
 // ── write everything ─────────────────────────────────────────────────────────
@@ -225,7 +232,7 @@ writeFileSync(join(OUT, 'feed.xml'), renderFeed(feedItems, { base: SITE_URL, sit
 
 writeFileSync(join(OUT, 'robots.txt'), renderRobots(SITE_URL));
 writeFileSync(join(OUT, '_headers'), renderHeaders());
-writeFileSync(join(OUT, 'og.svg'), ogSvg());
+writeFileSync(join(OUT, 'og.png'), ogPng());
 copyFileSync(join(HERE, 'public-site.css'), join(OUT, 'site.css'));
 copyFileSync(join(HERE, 'public', 'brain.svg'), join(OUT, 'brain.svg'));
 
