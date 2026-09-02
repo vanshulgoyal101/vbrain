@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  urlForPath, filePathFor, escapeHtml, metaDescription, pageTitle, rewriteLinks,
+  urlForPath, filePathFor, escapeHtml, metaDescription, pageTitle, rewriteLinks, stripLeadingH1,
   renderRobots, renderHeaders, renderSitemap, breadcrumbJsonLd, articleJsonLd, htmlShell,
 } from '../src/ssg.js';
 
@@ -91,6 +91,15 @@ describe('renderHeaders', () => {
   });
 });
 
+describe('stripLeadingH1', () => {
+  it('removes the leading H1 and keeps the body', () => {
+    expect(stripLeadingH1('# Title\n\nbody here')).toBe('body here');
+  });
+  it('is a no-op when there is no leading H1', () => {
+    expect(stripLeadingH1('no title\nbody')).toBe('no title\nbody');
+  });
+});
+
 describe('renderSitemap', () => {
   it('emits a loc per entry with home priority 1.0', () => {
     const xml = renderSitemap([{ path: 'README.md' }, { path: 'now.md', lastmod: '2026-09-02' }], BASE);
@@ -126,6 +135,10 @@ describe('htmlShell', () => {
     expect(doc).toContain('property="og:title"');
     expect(doc).toContain('application/ld+json');
     expect(doc).toContain('<main>hi</main>');
+  });
+  it('has a skip link and color-scheme for a11y', () => {
+    expect(doc).toContain('<a class="skip" href="#main">Skip to content</a>');
+    expect(doc).toContain('<meta name="color-scheme" content="dark light" />');
   });
   it('can emit noindex', () => {
     expect(htmlShell({ title: 'T', description: 'D', canonical: BASE, base: BASE, bodyHtml: '', indexable: false }))

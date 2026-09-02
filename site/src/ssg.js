@@ -60,6 +60,12 @@ export function rewriteLinks(html, fromPath) {
   });
 }
 
+// Strip the leading H1 from note markdown — the landing supplies its own <h1>
+// (the hero), so rendering the README's H1 too would create a second page H1.
+export function stripLeadingH1(md) {
+  return (md || '').replace(/^\s*#\s+.*(?:\r?\n)+/, '');
+}
+
 // robots.txt — public site is fully indexable and points at the sitemap.
 export function renderRobots(base) {
   return `User-agent: *\nAllow: /\n\nSitemap: ${base}/sitemap.xml\n`;
@@ -136,6 +142,7 @@ export function htmlShell({ title, description, canonical, base, bodyHtml, jsonL
   <meta name="description" content="${escapeHtml(description)}" />
   <link rel="canonical" href="${escapeHtml(canonical)}" />
   <meta name="theme-color" content="${themeColor}" />
+  <meta name="color-scheme" content="dark light" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="${escapeHtml(title)}" />
   <meta property="og:description" content="${escapeHtml(description)}" />
@@ -150,6 +157,7 @@ export function htmlShell({ title, description, canonical, base, bodyHtml, jsonL
   ${ld}
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 ${bodyHtml}
 </body>
 </html>

@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { marked } from 'marked';
 import { titleOf, sectionOf, graphData } from './public/lib.js';
 import {
-  urlForPath, filePathFor, escapeHtml, metaDescription, pageTitle, rewriteLinks,
+  urlForPath, filePathFor, escapeHtml, metaDescription, pageTitle, rewriteLinks, stripLeadingH1,
   renderRobots, renderHeaders, renderSitemap, breadcrumbJsonLd, articleJsonLd, htmlShell,
 } from './src/ssg.js';
 
@@ -51,7 +51,7 @@ for (const e of edges) inbound.get(e.target)?.push(e.source);
 
 const BRAND_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/></svg>';
 
-const nav = () => `<header class="site-nav"><div class="wrap"><a class="brand" href="/">${BRAND_SVG}<span>${escapeHtml(SITE_NAME)}</span></a><span class="spacer"></span><a class="navlink" href="/#notes">Notes</a><a class="navlink" href="${REPO}" rel="noopener">GitHub</a></div></header>`;
+const nav = () => `<header class="site-nav"><nav class="wrap" aria-label="Primary"><a class="brand" href="/">${BRAND_SVG}<span>${escapeHtml(SITE_NAME)}</span></a><span class="spacer"></span><a class="navlink" href="/#notes">Notes</a><a class="navlink" href="${REPO}" rel="noopener">GitHub</a></nav></header>`;
 const foot = () => `<footer class="site-foot"><div class="wrap"><span>${escapeHtml(SITE_NAME)} — an open-source second-brain engine.</span><span><a href="${REPO}" rel="noopener">Source</a> · MIT</span></div></footer>`;
 
 // ── render one note page ─────────────────────────────────────────────────────
@@ -96,8 +96,8 @@ function renderLanding() {
   <p class="lede">${escapeHtml(desc)}</p>
   <div class="cta"><a class="btn primary" href="#notes">Explore the demo brain</a><a class="btn" href="${REPO}" rel="noopener">View on GitHub</a></div>
 </div></header>
-<section class="wrap"><div class="features">${featureCards}</div></section>
-<main id="main" class="wrap prose">${rewriteLinks(marked.parse(readme), 'README.md')}</main>
+<section class="wrap features-section"><h2>What you get</h2><div class="features">${featureCards}</div></section>
+<main id="main" class="wrap prose">${rewriteLinks(marked.parse(stripLeadingH1(readme)), 'README.md')}</main>
 <section id="notes" class="wrap notes-index"><h2>The demo brain</h2><ul class="card-grid">${indexCards}</ul></section>
 ${foot()}`;
 
