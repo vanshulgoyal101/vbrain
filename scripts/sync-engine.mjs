@@ -29,7 +29,8 @@ const DEST = resolve(SRC, args.find((a) => !a.startsWith('--')) || '../vbrain-pr
 const SHARED_FILES = [
   'site/src/worker.js', 'site/src/http.js', 'site/src/access.js', 'site/src/content.js',
   'site/src/captures.js', 'site/src/edit.js', 'site/src/recent.js', 'site/src/search.js',
-  'site/public/lib.js', 'site/public/sw.js', 'site/public/styles.css', 'site/vitest.config.js',
+  'site/public/app.js', 'site/public/lib.js', 'site/public/sw.js', 'site/public/styles.css',
+  'site/vitest.config.js',
   'scripts/validate.mjs', 'scripts/graph.mjs', 'scripts/doctor.mjs',
   'scripts/new-note.mjs', 'scripts/drain-inbox.mjs',
 ];
