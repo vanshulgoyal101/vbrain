@@ -103,10 +103,7 @@ async function init() {
   if (captureEnabled) setupCapture();
   setupChrome();
 
-  try {
-    const data = await api('/api/bundle').then((r) => (r.ok ? r.json() : Promise.reject(r)));
-    FILES = data.files || {};
-  } catch {
+  if (!(await reloadBundle())) {
     $('#content').innerHTML = `<h1>Can't load the brain</h1><p class="muted">Backend error \u2014 the GITHUB_TOKEN secret may be missing, or your session expired. Try signing out and back in.</p>`;
     return;
   }
@@ -115,6 +112,18 @@ async function init() {
   window.addEventListener('hashchange', route);
   route();
   $('#search').addEventListener('input', onSearch);
+}
+
+// Pull the whole brain into memory. Called at boot and after any write, so search
+// and nav see a note edit immediately instead of on the next reload.
+async function reloadBundle() {
+  try {
+    const data = await api('/api/bundle').then((r) => (r.ok ? r.json() : Promise.reject(r)));
+    FILES = data.files || {};
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // Add a sign-out link to the sidebar footer.
@@ -534,7 +543,9 @@ function renderInbox() {
           const r = await api('/api/note-append', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ path: sel.value, text: c.text }) });
           if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `error ${r.status}`);
           await api('/api/capture-file', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: Number(c.id) }) });
+          await reloadBundle(); // otherwise search still misses the text just filed
           await refreshInboxCount();
+          buildNav($('#search').value.trim());
           renderInbox();
         } catch (e) { fileBtn.disabled = false; status.textContent = e.message; }
       });
@@ -544,8 +555,14 @@ function renderInbox() {
     const dismiss = document.createElement('button');
     dismiss.className = 'cap-file';
     dismiss.type = 'button';
-    dismiss.textContent = editEnabled ? '✓ dismiss' : '✓ filed';
+    // Without write access this only marks the row filed — it does NOT write the
+    // text into a note, so say so rather than claiming it was filed.
+    dismiss.textContent = editEnabled ? '✓ dismiss' : '✓ mark done (not saved to a note)';
+    dismiss.title = editEnabled
+      ? 'Remove from the inbox without appending it to a note.'
+      : 'Removes it from the inbox only. The text stays in the capture store but is not searchable until you add it to a note.';
     dismiss.addEventListener('click', async () => {
+      if (!editEnabled && !confirm('This only clears it from the inbox — the text is NOT added to a note and stays unsearchable.\n\nCopy it somewhere first if you need it. Continue?')) return;
       await api('/api/capture-file', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: Number(c.id) }) });
       await refreshInboxCount();
       renderInbox();

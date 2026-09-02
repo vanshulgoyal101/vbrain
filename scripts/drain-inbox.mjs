@@ -20,6 +20,9 @@ import { rankHits, titleOf } from '../site/public/lib.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const JSON_OUT = process.argv.includes('--json');
+// --filed lists captures already marked filed — the only way to read one back,
+// since both the inbox UI and this script default to unfiled.
+const FILED = process.argv.includes('--filed') ? 'true' : 'false';
 const limIdx = process.argv.indexOf('--limit');
 const LIMIT = limIdx !== -1 ? Math.max(1, parseInt(process.argv[limIdx + 1], 10) || 100) : 100;
 
@@ -73,7 +76,7 @@ if (!url) { console.error('No SUPABASE_URL (set env or site/wrangler.toml).'); p
 const key = await serviceKey(url);
 if (!key) { console.error('No service key. Set SUPABASE_SERVICE_KEY, or SUPABASE_TOKEN (env or arcade/.env).'); process.exit(1); }
 
-const res = await fetch(`${url}/rest/v1/vbrain_captures?filed=eq.false&select=id,text,created_at&order=created_at.asc&limit=${LIMIT}`, {
+const res = await fetch(`${url}/rest/v1/vbrain_captures?filed=eq.${FILED}&select=id,text,created_at&order=created_at.asc&limit=${LIMIT}`, {
   headers: { apikey: key, Authorization: `Bearer ${key}` },
 });
 if (!res.ok) { console.error(`Supabase ${res.status}`); process.exit(1); }
@@ -89,7 +92,7 @@ const plan = captures.map((c) => ({
 
 if (JSON_OUT) { console.log(JSON.stringify({ count: plan.length, plan }, null, 2)); process.exit(0); }
 
-console.log(`\n🗂  Inbox — ${plan.length} unfiled capture${plan.length === 1 ? '' : 's'}\n`);
+console.log(`\n🗂  Inbox — ${plan.length} ${FILED === 'true' ? 'filed' : 'unfiled'} capture${plan.length === 1 ? '' : 's'}\n`);
 if (!plan.length) { console.log('Nothing to file. 🎉\n'); process.exit(0); }
 for (const c of plan) {
   const when = (c.created_at || '').slice(0, 10);
