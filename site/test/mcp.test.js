@@ -74,4 +74,13 @@ describe('handleMcp', () => {
     expect(body.result.isError).toBe(false);
     expect(body.result.content[0].text).toContain('career/profile.md');
   });
+  it('tools/call surfaces a tool error as isError', async () => {
+    const gz = await gzip(makeTar({ 'o-r-sha/README.md': '# R' }));
+    const fetchImpl = async () => new Response(gz, { status: 200 });
+    const env = { GH_OWNER: 'o', GH_REPO: 'r', GITHUB_TOKEN: 't' };
+    const res = await handleMcp(rpc('tools/call', { name: 'get_note', arguments: { path: 'nope.md' } }), env, fetchImpl);
+    const body = await res.json();
+    expect(body.result.isError).toBe(true);
+    expect(body.result.content[0].text).toMatch(/not found/);
+  });
 });

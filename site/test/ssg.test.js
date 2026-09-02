@@ -26,6 +26,9 @@ describe('escapeHtml', () => {
     expect(escapeHtml('<a href="x">&\'')).toBe('&lt;a href=&quot;x&quot;&gt;&amp;&#39;');
     expect(escapeHtml(null)).toBe('');
   });
+  it('coerces non-strings', () => {
+    expect(escapeHtml(42)).toBe('42');
+  });
 });
 
 describe('metaDescription', () => {
@@ -64,6 +67,9 @@ describe('rewriteLinks', () => {
   it('leaves anchors and absolute paths alone', () => {
     expect(rewriteLinks('<a href="#top">t</a>', 'README.md')).toBe('<a href="#top">t</a>');
     expect(rewriteLinks('<a href="/x.html">t</a>', 'README.md')).toBe('<a href="/x.html">t</a>');
+  });
+  it('leaves mailto links unchanged', () => {
+    expect(rewriteLinks('<a href="mailto:x@y.com">m</a>', 'README.md')).toBe('<a href="mailto:x@y.com">m</a>');
   });
 });
 

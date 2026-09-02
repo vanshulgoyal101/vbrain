@@ -66,6 +66,19 @@ describe('saveNote', () => {
     const res = await saveNote(put({ path: 'ideas/new.md', content: '# New\n> **TL;DR** x\nbody' }), ENV, f);
     expect((await res.json()).created).toBe(true);
   });
+  it('registers a brand-new note in MAP.md (ensureMapEntry PUT path)', async () => {
+    const map = '# MAP\n\n## Learnings\n\n| Key | Path | Summary |\n|-----|------|---------|\n| `learn.a` | [learnings/a.md](learnings/a.md) | A. |\n';
+    const f = mockFetch([
+      () => resp({ message: 'Not Found' }, 404),                                        // GET note (new)
+      () => resp({ commit: { sha: 'c1' } }, 201),                                       // PUT note
+      () => resp({ content: Buffer.from(map).toString('base64'), sha: 'mapsha' }),      // GET MAP.md
+      () => resp({ commit: { sha: 'c2' } }, 200),                                       // PUT MAP.md
+    ]);
+    const res = await saveNote(put({ path: 'learnings/new.md', content: '# New\n> **TL;DR** x\nbody' }), ENV, f);
+    const body = await res.json();
+    expect(body).toMatchObject({ created: true, mapRegistered: true });
+    expect(JSON.parse(f.calls[3].init.body).message).toContain('register learnings/new.md');
+  });
 });
 
 describe('saveNotePR', () => {

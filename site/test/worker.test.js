@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import worker from '../src/worker.js';
+import worker, { api } from '../src/worker.js';
 
 // Minimal ctx stub (waitUntil is a no-op in tests).
 const ctx = { waitUntil() {} };
@@ -7,6 +7,20 @@ const req = (path, init) => new Request(`https://brain.example.com${path}`, init
 
 // A caches shim so bundleResponse can run in the router path.
 beforeAll(() => { globalThis.caches = { default: { match: async () => undefined, put: async () => {} } }; });
+
+describe('api() dispatch', () => {
+  it('/api/me returns the identity + feature flags', async () => {
+    const res = await api('/api/me', req('/api/me'), {}, ctx, { email: 'a@b.com' });
+    expect(res.status).toBe(200);
+    expect((await res.json()).email).toBe('a@b.com');
+  });
+  it('unknown route → 404', async () => {
+    expect((await api('/api/nope', req('/api/nope'), {}, ctx, {})).status).toBe(404);
+  });
+  it('known route with the wrong method → 404', async () => {
+    expect((await api('/api/note', req('/api/note', { method: 'GET' }), {}, ctx, {})).status).toBe(404);
+  });
+});
 
 describe('worker routing', () => {
   it('/healthz is public and reports feature flags', async () => {

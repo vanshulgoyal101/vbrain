@@ -58,7 +58,8 @@ export default {
   },
 };
 
-async function api(path, request, env, ctx, auth) {
+// Routes an authenticated /api/* request. Exported for unit tests.
+export async function api(path, request, env, ctx, auth) {
   const method = request.method;
   if (path === '/api/me' && method === 'GET') return json({ email: auth.email, capture: captureEnabled(env), edit: editEnabled(env), recent: recentEnabled(env) });
   if (path === '/api/bundle' && method === 'GET') return await bundleResponse(env, ctx);
