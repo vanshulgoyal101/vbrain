@@ -12,6 +12,7 @@ feature and the whole architecture is written down here.
 | [DATABASE.md](DATABASE.md) | The one table (`vbrain_captures`), RLS/service-role model, lifecycle, migration. |
 | [MCP.md](MCP.md) | The MCP server — tools, auth, client config, Access bypass. |
 | [SECURITY.md](SECURITY.md) | Threat model, headers, secrets, the private/no-SEO decision. |
+| [PUBLIC-SITE.md](PUBLIC-SITE.md) | The SEO static build (SSG) for the public site (vbrain.vanshul.com). |
 | [TESTING.md](TESTING.md) | Vitest suites, the real-crypto JWT test, the injectable-deps pattern. |
 | [ROADMAP.md](ROADMAP.md) | Shipped, proposed, and explicit non-goals. |
 
@@ -21,6 +22,7 @@ feature and the whole architecture is written down here.
 cd site
 npm install
 npm test                 # unit suite (Vitest)
+npm run build:site        # build the public SEO site -> site/dist/
 node dev-server.mjs       # local read-only preview at http://localhost:8787
 npx wrangler deploy       # deploy the Worker (see ../README.md for full setup)
 ```
