@@ -135,15 +135,20 @@ export function renderRobots(base) {
   return `User-agent: *\nAllow: /\n\nSitemap: ${base}/sitemap.xml\n\n# AI agents: ${base}/llms.txt (index) and ${base}/llms-full.txt (full text)\n`;
 }
 
-// Cloudflare Pages `_headers` — strict security headers site-wide (the static
-// pages run zero client JS, so script-src can be 'none') + asset caching.
+// Cloudflare Pages `_headers` — strict security headers site-wide + asset caching.
+// The pages ship no first-party JS, but Pages injects the Cloudflare Web Analytics
+// beacon, so script-src allowlists exactly that origin (and nothing else, including
+// no 'unsafe-inline') instead of 'none', which blocked it and logged a CSP error on
+// every page view. Turn injection off in the Pages dashboard to drop this.
+const CF_BEACON = 'https://static.cloudflareinsights.com';
+
 export function renderHeaders() {
   return [
     '/*',
     '  X-Content-Type-Options: nosniff',
     '  Referrer-Policy: no-referrer',
     '  X-Frame-Options: DENY',
-    "  Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'",
+    `  Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self'; script-src ${CF_BEACON}; connect-src 'self' https://cloudflareinsights.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'`,
     '  Permissions-Policy: geolocation=(), microphone=(), camera=()',
     '',
     '/*.css',

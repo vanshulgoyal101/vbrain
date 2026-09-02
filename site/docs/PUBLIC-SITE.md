@@ -146,9 +146,11 @@ same date (it still builds — it just loses the freshness signal).
 
 ## Notes / future
 
-- The OG image is an SVG. Some crawlers prefer PNG; a rasterized `og.png` is a
-  potential upgrade (needs an image lib).
-- Section index pages (`/projects/`) are a potential add; section READMEs are
-  currently served at `/projects/README`.
-- The static pages ship **zero client JS**, so `_headers` sets `script-src 'none'`;
-  JSON-LD is inline data (crawlers read it from source regardless).
+- The pages ship **zero first-party JS**. `script-src` is not `'none'` only because
+  Cloudflare Pages injects its Web Analytics beacon; the policy allowlists exactly
+  `https://static.cloudflareinsights.com` and still forbids `unsafe-inline`/`eval`.
+  Turn injection off in the Pages dashboard if you'd rather have `'none'` back.
+  JSON-LD is inline *data*, not script execution — crawlers read it either way.
+- Search is not part of the static export (the private app has BM25 search over the
+  in-memory bundle). A static index is possible but would mean shipping JS.
+

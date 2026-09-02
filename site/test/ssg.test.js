@@ -100,12 +100,20 @@ describe('renderRobots', () => {
 });
 
 describe('renderHeaders', () => {
-  it('sets strict security headers and script-src none', () => {
+  it('sets strict security headers and caches assets', () => {
     const h = renderHeaders();
     expect(h).toContain('/*');
     expect(h).toContain('X-Content-Type-Options: nosniff');
-    expect(h).toContain("script-src 'none'");
+    expect(h).toContain("default-src 'self'");
     expect(h).toContain('Cache-Control: public, max-age=86400');
+  });
+  it('allows only the Cloudflare analytics beacon to run scripts', () => {
+    const csp = renderHeaders().match(/Content-Security-Policy: (.*)/)[1];
+    expect(csp).toContain('script-src https://static.cloudflareinsights.com');
+    expect(csp).not.toContain('unsafe-inline');
+    expect(csp).not.toContain('unsafe-eval');
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).toContain("object-src 'none'");
   });
 });
 
