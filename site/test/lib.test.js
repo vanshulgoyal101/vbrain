@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sectionOf, titleOf, resolvePath, sortPaths, matches, fold, tokenize, excerpt, highlight, slugify, backlinksFor, rankHits, graphData, suggestTargets, sectionBullets, parseQuery, editDistanceLE } from '../public/lib.js';
+import { sectionOf, titleOf, resolvePath, sortPaths, matches, fold, tokenize, excerpt, highlight, slugify, backlinksFor, rankHits, graphData, suggestTargets, sectionBullets, parseQuery, editDistanceLE, escapeHtml, safeUrl, relativeTime } from '../public/lib.js';
 
 describe('sectionOf', () => {
   it('returns folder or empty for root', () => {
@@ -247,5 +247,51 @@ describe('sectionBullets', () => {
   });
   it('caps the count', () => {
     expect(sectionBullets(md, 'Focus right now', 1)).toEqual(['**Primary bet:** PixelPaws']);
+  });
+});
+
+describe('escapeHtml', () => {
+  it('escapes angle brackets and ampersands', () => {
+    expect(escapeHtml('<script>a & b</script>')).toBe('&lt;script&gt;a &amp; b&lt;/script&gt;');
+  });
+  it('escapes quotes so attribute interpolation cannot break out', () => {
+    // a note path containing a quote must not be able to inject an attribute
+    expect(escapeHtml('x" onerror="alert(1)')).toBe('x&quot; onerror=&quot;alert(1)');
+    expect(escapeHtml("it's")).toBe('it&#39;s');
+  });
+  it('renders null/undefined as empty', () => {
+    expect(escapeHtml(null)).toBe('');
+    expect(escapeHtml(undefined)).toBe('');
+  });
+});
+
+describe('safeUrl', () => {
+  it('passes http(s) through', () => {
+    expect(safeUrl('https://github.com/x')).toBe('https://github.com/x');
+    expect(safeUrl('http://example.com')).toBe('http://example.com');
+  });
+  it('blocks script-bearing and relative schemes', () => {
+    expect(safeUrl('javascript:alert(1)')).toBe('#');
+    expect(safeUrl('data:text/html,<script>')).toBe('#');
+    expect(safeUrl('')).toBe('#');
+    expect(safeUrl(undefined)).toBe('#');
+  });
+});
+
+describe('relativeTime', () => {
+  const now = Date.parse('2026-09-02T12:00:00Z');
+  const ago = (ms) => new Date(now - ms).toISOString();
+  it('bucket by age', () => {
+    expect(relativeTime(ago(5e3), now)).toBe('just now');
+    expect(relativeTime(ago(5 * 60e3), now)).toBe('5m ago');
+    expect(relativeTime(ago(3 * 3600e3), now)).toBe('3h ago');
+    expect(relativeTime(ago(2 * 86400e3), now)).toBe('2d ago');
+  });
+  it('falls back to an ISO date beyond a week', () => {
+    expect(relativeTime('2026-01-15T00:00:00Z', now)).toBe('2026-01-15');
+  });
+  it('is empty for missing or unparseable input', () => {
+    expect(relativeTime('', now)).toBe('');
+    expect(relativeTime('not-a-date', now)).toBe('');
   });
 });

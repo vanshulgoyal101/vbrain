@@ -12,6 +12,7 @@ design**: only `owner@example.com` can ever see it.
 | Forged / tampered JWT | **ES256** signature verified against Supabase's JWKS; `aud` (`authenticated`), `iss`, and `exp` all checked; alg pinned to ES256; `kid` must match a known key. |
 | Content leak via search engines | `noindex, nofollow` + private-by-design (see below). |
 | XSS in rendered notes | Content is first-party; capture/inbox text rendered via `textContent`; strict **CSP** (`script-src 'self'`, marked vendored locally). |
+| XSS via HTML-string interpolation | The few places that build HTML strings (search hits, commit rows) escape through a single hardened `escapeHtml` in `lib.js` that escapes `& < > " '` — so a value interpolated into `href="…"` cannot break out of the attribute. Link hrefs additionally pass `safeUrl()`, which allows only `http(s):` (blocking `javascript:`/`data:`). |
 | Clickjacking | `X-Frame-Options: DENY` + `frame-ancestors 'none'`. |
 | Capture data exposure | `vbrain_captures` has RLS on with **no policies** → service-role only; the public anon key cannot read/write it. |
 | Secret leakage | GitHub + Supabase keys are **Worker secrets**, never in the bundle or the browser. |

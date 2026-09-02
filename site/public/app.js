@@ -1,6 +1,6 @@
 // Brain UI controller. Loads the whole brain in one authenticated request, then
 // renders markdown, navigation, search, backlinks, ToC, and the capture inbox.
-import { sectionOf, titleOf, resolvePath, sortPaths, matches, excerpt, highlight, slugify, backlinksFor, rankHits, graphData, suggestTargets, sectionBullets } from './lib.js';
+import { sectionOf, titleOf, resolvePath, sortPaths, matches, excerpt, highlight, slugify, backlinksFor, rankHits, graphData, suggestTargets, sectionBullets, escapeHtml, safeUrl, relativeTime } from './lib.js';
 
 const SECTION_LABEL = {
   '': 'Overview', career: 'Career', projects: 'Projects',
@@ -390,25 +390,13 @@ function renderGraph() {
 }
 
 // ── recent changes + daily briefing ─────────────────────────────────────────
-const escapeHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-
-function relativeTime(iso) {
-  if (!iso) return '';
-  const secs = (Date.now() - new Date(iso).getTime()) / 1000;
-  if (secs < 60) return 'just now';
-  if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
-  if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
-  if (secs < 604800) return `${Math.floor(secs / 86400)}d ago`;
-  return new Date(iso).toISOString().slice(0, 10);
-}
-
 async function fetchRecentCommits() {
   try { return (await api('/api/recent').then((r) => r.json())).commits || []; } catch { return []; }
 }
 
 function commitRow(c, showSha = true) {
   const meta = (showSha ? escapeHtml(c.sha) + ' · ' : '') + escapeHtml(relativeTime(c.date));
-  return `<li class="rc"><a href="${escapeHtml(c.url || '#')}" target="_blank" rel="noopener" class="rc-msg">${escapeHtml(c.message)}</a><span class="rc-meta">${meta}</span></li>`;
+  return `<li class="rc"><a href="${escapeHtml(safeUrl(c.url))}" target="_blank" rel="noopener" class="rc-msg">${escapeHtml(c.message)}</a><span class="rc-meta">${meta}</span></li>`;
 }
 
 async function renderRecent() {
@@ -461,7 +449,7 @@ function renderSearch(q) {
   const hits = rankHits(FILES, q, titleOf).map((h) => h.path);
   const cards = hits.map((p) => {
     const body = highlight(excerpt(FILES[p], q), q);
-    return `<a class="hit" href="#/${p}"><div class="hit-title">${escapeHtml(titleOf(FILES[p], p))}</div><div class="hit-path">${escapeHtml(p)}</div><div class="hit-snip">${body}</div></a>`;
+    return `<a class="hit" href="${escapeHtml('#/' + p)}"><div class="hit-title">${escapeHtml(titleOf(FILES[p], p))}</div><div class="hit-path">${escapeHtml(p)}</div><div class="hit-snip">${body}</div></a>`;
   }).join('');
   el.innerHTML = `<h1>Search</h1><p class="muted">${hits.length} result${hits.length === 1 ? '' : 's'} for “${escapeHtml(q)}”.</p><div class="hits">${cards || '<p class="muted">No matches.</p>'}</div>`;
   el.parentElement.scrollTop = 0;

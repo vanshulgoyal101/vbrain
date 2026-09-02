@@ -3,7 +3,10 @@
 // the file reads/writes and markdown rendering. This lets a brain export itself as
 // a fast, fully-indexable static site (each note becomes its own HTML page).
 
-import { sectionOf, titleOf, resolvePath } from '../public/lib.js';
+import { sectionOf, titleOf, resolvePath, escapeHtml } from '../public/lib.js';
+
+// Re-exported so the SSG has one obvious import surface (and one escaper).
+export { escapeHtml };
 
 // A note path → the site URL (clean, no .html — Cloudflare Pages serves and
 // prefers extensionless URLs). README.md is the home page ("/").
@@ -39,13 +42,6 @@ export function sectionGroups(paths) {
     out.get(sec).push(p);
   }
   return out;
-}
-
-// Escape text for safe inclusion in HTML/attributes.
-export function escapeHtml(s) {
-  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
-  ));
 }
 
 // A concise meta description: the note's `> TL;DR` blockquote (label stripped),

@@ -313,4 +313,31 @@ export function graphData(files, resolve = resolvePath) {
   return { nodes, edges };
 }
 
+// Escape for interpolation into HTML text *and* attribute values. Quotes are
+// escaped too, so `href="${escapeHtml(x)}"` can't be broken out of.
+export function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+// Only http(s) URLs are allowed in an href — blocks `javascript:`/`data:` payloads
+// from any upstream that feeds us a link.
+export function safeUrl(u) {
+  return /^https?:\/\//i.test(String(u || '').trim()) ? String(u).trim() : '#';
+}
+
+// "3h ago" style stamps; falls back to a plain ISO date beyond a week.
+export function relativeTime(iso, now = Date.now()) {
+  if (!iso) return '';
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return '';
+  const secs = (now - t) / 1000;
+  if (secs < 60) return 'just now';
+  if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
+  if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
+  if (secs < 604800) return `${Math.floor(secs / 86400)}d ago`;
+  return new Date(iso).toISOString().slice(0, 10);
+}
+
 
