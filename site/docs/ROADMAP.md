@@ -37,7 +37,7 @@ in docs, not memory.
 - **Graph view** — in-UI force-directed map of the note link-graph (click to open).
 - **Inline edit** — edit a note in the UI and commit it to the private repo
   (optional, `GITHUB_WRITE_TOKEN`-gated).
-- **Tests** — 170 Vitest unit tests (real JWT verification + MCP + router + edit + PR + recent + search engine + SSG); ~98% coverage (`npm run test:coverage`).
+- **Tests** — 177 Vitest unit tests (real JWT verification + MCP + router + edit + append + PR + recent + search engine + SSG); ~98% coverage (`npm run test:coverage`).
 - **Recently changed** — `/api/recent` GitHub-commits feed + a "Recently changed" view.
 - **Daily briefing** — deterministic `#/briefing` view (focus + next moves + open
   tensions + recent changes + inbox), assembled from the notes themselves.
@@ -55,11 +55,13 @@ in docs, not memory.
   a11y. `npm run build:site`. See [PUBLIC-SITE.md](PUBLIC-SITE.md).
 - **Engine sync** — `scripts/sync-engine.mjs` keeps the shared engine identical
   across the public (canonical) and private brains. See [scripts/README](../../scripts/README.md).
+- **Capture → note write-through** — one click to append a filed capture into a
+  suggested note. The inbox shows a target picker + "File into note" button that
+  appends a dated bullet via `POST /api/note-append` (append-only, secret-scanned)
+  and marks the capture filed. Edit-gated on `GITHUB_WRITE_TOKEN`.
 
 ## Proposed / potential
 
-- **Capture → note write-through** — one click to append a filed capture into its
-  suggested note via the edit API (today it suggests + links; filing is manual).
 - **Briefing history** — snapshot the daily briefing over time to see drift.
 - **Full-text server search** — currently client-side over the in-memory bundle;
   fine at this scale, revisit only if the brain grows large.

@@ -20,6 +20,10 @@ describe('api() dispatch', () => {
   it('known route with the wrong method → 404', async () => {
     expect((await api('/api/note', req('/api/note', { method: 'GET' }), {}, ctx, {})).status).toBe(404);
   });
+  it('/api/note-append routes to the append handler (503 without a write token)', async () => {
+    const res = await api('/api/note-append', req('/api/note-append', { method: 'POST', body: '{}' }), {}, ctx, {});
+    expect(res.status).toBe(503);
+  });
 });
 
 describe('worker routing', () => {

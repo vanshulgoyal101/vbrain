@@ -4,6 +4,7 @@ node_modules/
 # build / local tooling
 .wrangler/
 dist/
+coverage/
 *.log
 
 # secrets (never commit)

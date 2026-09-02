@@ -518,15 +518,52 @@ function renderInbox() {
       });
       li.appendChild(sugg);
     }
-    const btn = document.createElement('button');
-    btn.className = 'cap-file';
-    btn.textContent = '✓ filed';
-    btn.addEventListener('click', async () => {
+    const actions = document.createElement('div');
+    actions.className = 'cap-actions';
+    const status = document.createElement('span');
+    status.className = 'muted cap-status';
+
+    // With write access, "File into note" appends the capture into the chosen note
+    // (then marks it filed). Without it, we can only mark it filed (dismiss).
+    if (editEnabled) {
+      const sel = document.createElement('select');
+      sel.className = 'cap-target';
+      sel.setAttribute('aria-label', 'Target note');
+      for (const t of suggestTargets(c.text, FILES).slice(0, 5)) {
+        const o = document.createElement('option');
+        o.value = t.path;
+        o.textContent = titleOf(FILES[t.path], t.path);
+        sel.appendChild(o);
+      }
+      const fileBtn = document.createElement('button');
+      fileBtn.className = 'cap-file-into';
+      fileBtn.type = 'button';
+      fileBtn.textContent = 'File into note';
+      fileBtn.addEventListener('click', async () => {
+        if (!sel.value) return;
+        fileBtn.disabled = true; status.textContent = 'filing…';
+        try {
+          const r = await api('/api/note-append', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ path: sel.value, text: c.text }) });
+          if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `error ${r.status}`);
+          await api('/api/capture-file', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: Number(c.id) }) });
+          await refreshInboxCount();
+          renderInbox();
+        } catch (e) { fileBtn.disabled = false; status.textContent = e.message; }
+      });
+      actions.append(sel, fileBtn);
+    }
+
+    const dismiss = document.createElement('button');
+    dismiss.className = 'cap-file';
+    dismiss.type = 'button';
+    dismiss.textContent = editEnabled ? '✓ dismiss' : '✓ filed';
+    dismiss.addEventListener('click', async () => {
       await api('/api/capture-file', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: Number(c.id) }) });
       await refreshInboxCount();
       renderInbox();
     });
-    li.append(btn);
+    actions.append(dismiss, status);
+    li.append(actions);
     ul.appendChild(li);
   }
 }

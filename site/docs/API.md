@@ -81,6 +81,19 @@ Body `{ "path": "career/profile.md", "content": "# …", "message": "…" }`.
 Errors: `400` (validation), `503` (not configured), `502` (GitHub error). Needs
 `GITHUB_WRITE_TOKEN`.
 
+## `POST /api/note-append`
+Append a captured thought into an **existing** note as a dated bullet — the
+"file a capture into the brain" write (optional; needs `GITHUB_WRITE_TOKEN`).
+Append-only: it never rewrites the note, secret-scans the text, and guards the
+path. Body `{ "path": "career/profile.md", "text": "learned X today" }`.
+```json
+{ "ok": true, "path": "career/profile.md", "commit": "<sha>" }
+```
+The note gains a line `- learned X today (YYYY-MM-DD)` at the end and the edge
+bundle is purged. Errors: `400` (bad path / empty / too long / secret detected),
+`404` (note not found), `503` (not configured), `502` (GitHub error). Pair it
+with `POST /api/capture-file` to mark the capture filed.
+
 ## Status codes
 
 | Code | Meaning |

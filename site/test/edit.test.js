@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { editEnabled, validNotePath, saveNote, saveNotePR, assertNoteDiscipline, scanSecrets, insertMapRow } from '../src/edit.js';
+import { editEnabled, validNotePath, saveNote, saveNotePR, assertNoteDiscipline, scanSecrets, insertMapRow, appendToNote } from '../src/edit.js';
 
 const ENV = { GH_OWNER: 'o', GH_REPO: 'r', GITHUB_WRITE_TOKEN: 'wtok' };
 
@@ -161,5 +161,43 @@ describe('insertMapRow', () => {
   });
   it('returns null when already registered', () => {
     expect(insertMapRow(MAP, 'career/profile.md', 'Profile')).toBeNull();
+  });
+});
+
+describe('appendToNote', () => {
+  const b64 = (s) => Buffer.from(s).toString('base64');
+  const areq = (body) => new Request('https://brain/api/note-append', { method: 'POST', body: JSON.stringify(body) });
+
+  it('503 when editing not configured', async () => {
+    expect((await appendToNote(areq({ path: 'a.md', text: 'x' }), {}, mockFetch([() => resp({})]))).status).toBe(503);
+  });
+  it('400 on bad path', async () => {
+    expect((await appendToNote(areq({ path: '../x.md', text: 'x' }), ENV, mockFetch([() => resp({})]))).status).toBe(400);
+  });
+  it('400 on empty text', async () => {
+    expect((await appendToNote(areq({ path: 'career/x.md', text: '   ' }), ENV, mockFetch([() => resp({})]))).status).toBe(400);
+  });
+  it('404 when the note does not exist', async () => {
+    const f = mockFetch([() => resp({ message: 'Not Found' }, 404)]);
+    expect((await appendToNote(areq({ path: 'career/x.md', text: 'y' }), ENV, f)).status).toBe(404);
+  });
+  it('rejects secrets in the captured text', async () => {
+    // token built at runtime so no literal secret-shaped string sits in source
+    const res = await appendToNote(areq({ path: 'career/x.md', text: 'tok ' + 'ghp_' + 'A'.repeat(36) }), ENV, mockFetch([() => resp({})]));
+    expect(res.status).toBe(400);
+  });
+  it('appends a dated bullet using the current sha', async () => {
+    const f = mockFetch([
+      () => resp({ sha: 'sha1', content: b64('# Note\n> **TL;DR** x\n\nbody') }), // GET current
+      () => resp({ commit: { sha: 'c9' } }, 200),                                  // PUT
+    ]);
+    const res = await appendToNote(areq({ path: 'career/x.md', text: 'learned Y' }), ENV, f);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ ok: true, path: 'career/x.md', commit: 'c9' });
+    const putBody = JSON.parse(f.calls[1].init.body);
+    expect(putBody.sha).toBe('sha1');
+    const written = Buffer.from(putBody.content, 'base64').toString();
+    expect(written).toMatch(/- learned Y \(\d{4}-\d{2}-\d{2}\)\n$/);
+    expect(written).toContain('body'); // append-only: existing content preserved
   });
 });

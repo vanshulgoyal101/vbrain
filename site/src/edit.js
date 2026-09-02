@@ -201,3 +201,39 @@ export async function ensureMapEntry(env, path, title, fetchImpl = fetch) {
   });
   return put.ok;
 }
+
+// Append a captured thought into an EXISTING note as a dated bullet — the "file a
+// capture into the brain" write. Append-only (never rewrites the note),
+// secret-scanned, path-guarded. New notes go through saveNote instead.
+export async function appendToNote(request, env, fetchImpl = fetch) {
+  if (!editEnabled(env)) return json({ error: 'editing not configured' }, 503);
+  const body = await request.json().catch(() => ({}));
+  const path = body.path;
+  const text = typeof body.text === 'string' ? body.text.trim() : '';
+  if (!validNotePath(path)) return json({ error: 'bad path' }, 400);
+  if (!text) return json({ error: 'empty' }, 400);
+  if (text.length > 8000) return json({ error: 'too long' }, 400);
+  const secret = scanSecrets(text);
+  if (secret) return json({ error: `possible ${secret} — remove it` }, 400);
+
+  const { GH_OWNER, GH_REPO, GH_BRANCH = 'main', GITHUB_WRITE_TOKEN } = env;
+  const base = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${path}`;
+  const headers = { Authorization: `Bearer ${GITHUB_WRITE_TOKEN}`, 'User-Agent': 'vbrain', Accept: 'application/vnd.github+json' };
+
+  const head = await fetchImpl(`${base}?ref=${GH_BRANCH}`, { headers });
+  if (head.status === 404) return json({ error: 'note not found' }, 404);
+  if (!head.ok) return json({ error: `github ${head.status}` }, 502);
+  const cur = await head.json();
+  const date = new Date().toISOString().slice(0, 10);
+  const next = `${fromBase64(cur.content).replace(/\s*$/, '')}\n- ${text} (${date})\n`;
+
+  const put = await fetchImpl(base, {
+    method: 'PUT',
+    headers: { ...headers, 'content-type': 'application/json' },
+    body: JSON.stringify({ message: `file capture into ${path}`.slice(0, 200), content: toBase64(next), branch: GH_BRANCH, sha: cur.sha }),
+  });
+  if (!put.ok) return json({ error: `github ${put.status}` }, 502);
+  const data = await put.json();
+  await purgeBundle();
+  return json({ ok: true, path, commit: data.commit?.sha });
+}

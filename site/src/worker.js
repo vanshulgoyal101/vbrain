@@ -15,7 +15,7 @@ import { json, withSecurity } from './http.js';
 import { verifyAccess } from './access.js';
 import { bundleResponse } from './content.js';
 import { captureEnabled, listCaptures, addCapture, fileCapture } from './captures.js';
-import { editEnabled, saveNote, saveNotePR } from './edit.js';
+import { editEnabled, saveNote, saveNotePR, appendToNote } from './edit.js';
 import { recentResponse, recentEnabled } from './recent.js';
 import { handleMcp } from './mcp.js';
 
@@ -69,5 +69,6 @@ export async function api(path, request, env, ctx, auth) {
   if (path === '/api/capture-file' && method === 'POST') return await fileCapture(request, env);
   if (path === '/api/note' && method === 'PUT') return await saveNote(request, env);
   if (path === '/api/note-pr' && method === 'POST') return await saveNotePR(request, env);
+  if (path === '/api/note-append' && method === 'POST') return await appendToNote(request, env);
   return json({ error: 'not found' }, 404);
 }
