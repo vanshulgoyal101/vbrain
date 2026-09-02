@@ -67,7 +67,10 @@ export function pageTitle(md, path, siteName) {
 
 // Rewrite in-note markdown links (`x.md`, `../a/b.md`) to their static URLs, and
 // mark external links safe. Operates on rendered HTML; leaves anchors/mailto alone.
-export function rewriteLinks(html, fromPath) {
+// `known` is the set of note paths actually exported — a link to anything outside
+// it (dev docs like site/README.md, which the export skips) would otherwise become
+// a dead URL, so it points at the source on GitHub instead.
+export function rewriteLinks(html, fromPath, known = null, repoUrl = '') {
   return html.replace(/href="([^"]+)"/g, (m, href) => {
     if (/^(https?:|mailto:|#|\/)/i.test(href)) {
       return /^https?:/i.test(href) ? `href="${href}" rel="noopener" target="_blank"` : m;
@@ -75,6 +78,10 @@ export function rewriteLinks(html, fromPath) {
     const clean = href.replace(/#.*$/, '');
     if (!clean.endsWith('.md')) return m;
     const resolved = resolvePath(fromPath, clean);
+    if (known && !known.has(resolved)) {
+      if (!repoUrl) return m;
+      return `href="${escapeHtml(`${repoUrl}/blob/main/${resolved}`)}" rel="noopener" target="_blank"`;
+    }
     return `href="${escapeHtml(urlForPath(resolved))}"`;
   });
 }

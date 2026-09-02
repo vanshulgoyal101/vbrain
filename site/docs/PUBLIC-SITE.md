@@ -85,7 +85,12 @@ Two things that are easy to get wrong on a static host, both handled here:
   robots, JSON-LD, the HTML shell, link rewriting) — see [`../test/ssg.test.js`](../test/ssg.test.js).
 - IO + Markdown rendering in [`../build-site.mjs`](../build-site.mjs) (uses `marked`).
 - Note→note Markdown links are rewritten to their static URLs; external links get
-  `rel="noopener" target="_blank"`.
+  `rel="noopener" target="_blank"`. A link to a note the export *skips* (dev docs
+  like `site/README.md`) points at the source on GitHub rather than becoming a
+  dead URL.
+- **The build fails on a broken internal link.** After writing `dist`, every
+  internal `href` is resolved against the files actually produced; anything that
+  misses aborts the build, so a hard 404 can never ship.
 
 ## Deploy (Cloudflare Pages, from CI)
 

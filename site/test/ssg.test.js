@@ -72,6 +72,20 @@ describe('rewriteLinks', () => {
   it('leaves mailto links unchanged', () => {
     expect(rewriteLinks('<a href="mailto:x@y.com">m</a>', 'README.md')).toBe('<a href="mailto:x@y.com">m</a>');
   });
+  it('sends links to un-exported notes to the repo source instead of a dead URL', () => {
+    const known = new Set(['README.md', 'now.md']);
+    const out = rewriteLinks('<a href="site/README.md">dev docs</a>', 'README.md', known, 'https://github.com/o/r');
+    expect(out).toContain('href="https://github.com/o/r/blob/main/site/README.md"');
+    expect(out).toContain('rel="noopener"');
+  });
+  it('still uses the static URL for notes that were exported', () => {
+    const known = new Set(['README.md', 'now.md']);
+    expect(rewriteLinks('<a href="now.md">n</a>', 'README.md', known, 'https://github.com/o/r')).toContain('href="/now"');
+  });
+  it('leaves the link alone when no repo URL is configured', () => {
+    const out = rewriteLinks('<a href="site/README.md">d</a>', 'README.md', new Set(['README.md']), '');
+    expect(out).toBe('<a href="site/README.md">d</a>');
+  });
 });
 
 describe('renderRobots', () => {

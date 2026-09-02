@@ -46,6 +46,15 @@ function walk(dir, acc = []) {
 }
 const paths = walk(ROOT).sort();
 const files = Object.fromEntries(paths.map((p) => [p, readFileSync(join(ROOT, p), 'utf8')]));
+const KNOWN = new Set(paths);
+
+const walkOut = (dir, acc = []) => {
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name);
+    statSync(p).isDirectory() ? walkOut(p, acc) : acc.push(p);
+  }
+  return acc;
+};
 
 // inbound links (backlinks) from the note graph
 const { edges } = graphData(files);
@@ -77,7 +86,7 @@ const foot = () => `<footer class="site-foot"><div class="wrap"><span>${escapeHt
 // ── render one note page ─────────────────────────────────────────────────────
 function renderNote(path) {
   const md = files[path];
-  const body = addHeadingIds(rewriteLinks(marked.parse(md), path));
+  const body = addHeadingIds(rewriteLinks(marked.parse(md), path, KNOWN, REPO));
   const toc = tocHtml(body);
   const back = (inbound.get(path) || []).sort();
   const backHtml = back.length
@@ -166,7 +175,7 @@ function renderLanding() {
   <div class="cta"><a class="btn primary" href="#notes">Explore the demo brain</a><a class="btn" href="${REPO}" rel="noopener">View on GitHub</a></div>
 </div></header>
 <section class="wrap features-section"><h2>What you get</h2><div class="features">${featureCards}</div></section>
-<main id="main" class="wrap prose">${rewriteLinks(marked.parse(stripLeadingH1(readme)), 'README.md')}</main>
+<main id="main" class="wrap prose">${rewriteLinks(marked.parse(stripLeadingH1(readme)), 'README.md', KNOWN, REPO)}</main>
 <section id="notes" class="wrap notes-index"><h2>The demo brain</h2><ul class="card-grid">${indexCards}</ul></section>
 ${foot()}`;
 
@@ -242,6 +251,21 @@ copyFileSync(join(HERE, 'public', 'brain.svg'), join(OUT, 'brain.svg'));
 for (const f of ['llms.txt', 'llms-full.txt']) {
   const src = join(ROOT, f);
   if (existsSync(src)) copyFileSync(src, join(OUT, f));
+}
+
+// Every internal link must resolve to something we actually wrote. A dead link
+// is a hard 404 for crawlers, so fail the build rather than ship it.
+const broken = [];
+for (const page of walkOut(OUT)) {
+  if (!page.endsWith('.html')) continue;
+  for (const [, href] of readFileSync(page, 'utf8').matchAll(/href="(\/[^"#]*)"/g)) {
+    const hit = [join(OUT, href), join(OUT, `${href}.html`), join(OUT, href, 'index.html')].some(existsSync);
+    if (!hit) broken.push(`${relative(OUT, page)} → ${href}`);
+  }
+}
+if (broken.length) {
+  console.error(`❌ ${broken.length} broken internal link(s):\n  ${broken.join('\n  ')}`);
+  process.exit(1);
 }
 
 console.log(`✅ built ${paths.length} pages + ${SECTIONS.size} section hubs → ${relative(process.cwd(), OUT)}  (site: ${SITE_URL})`);
