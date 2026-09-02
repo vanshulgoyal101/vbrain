@@ -36,6 +36,10 @@ jobs:
   public-site:
     name: public site build
     runs-on: ubuntu-latest
+    # Deploy credentials are optional: without them this job still builds and
+    # verifies the site, it just skips the publish step.
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
       # Full history so the SSG can derive datePublished/dateModified per note.
       - uses: actions/checkout@v4
@@ -65,3 +69,17 @@ jobs:
           done
           grep -q '<lastmod>' dist/sitemap.xml || { echo "sitemap has no lastmod"; exit 1; }
           grep -q 'noindex, nofollow' dist/404.html || { echo "404 page is indexable"; exit 1; }
+
+      # Publish exactly the artifact that was just verified. Keeps the live site
+      # from drifting behind main the way a one-off manual upload does.
+      - name: deploy to Cloudflare Pages
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && env.CLOUDFLARE_API_TOKEN != ''
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: site
+          command: pages deploy dist --project-name=${{ vars.CF_PAGES_PROJECT || 'vbrain' }} --branch=main
+      - name: note when deploy is skipped
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && env.CLOUDFLARE_API_TOKEN == ''
+        run: echo "::notice::CLOUDFLARE_API_TOKEN not set — built and verified, but not published. See site/docs/PUBLIC-SITE.md."
