@@ -32,12 +32,15 @@ in docs, not memory.
   open in-app.
 - **Local preview** — dependency-free `dev-server.mjs` serves the UI + brain from
   local Markdown (no token / Access needed).
-- **CI** — GitHub Actions runs `validate.mjs --strict` + the site test suite on every push.
+- **CI** — GitHub Actions runs `validate.mjs --strict`, the site test suite, and a
+  **public-site build** on every push. The build job installs with `NODE_ENV=production`
+  (mirroring Cloudflare Pages, which prunes devDependencies) and asserts the SEO
+  surface exists — `404.html`, `sitemap.xml` with `lastmod`, `feed.xml`, `_headers`.
 - **Doctor** — `scripts/doctor.mjs` health report (orphans, staleness, now.md age).
 - **Graph view** — in-UI force-directed map of the note link-graph (click to open).
 - **Inline edit** — edit a note in the UI and commit it to the private repo
   (optional, `GITHUB_WRITE_TOKEN`-gated).
-- **Tests** — 177 Vitest unit tests (real JWT verification + MCP + router + edit + append + PR + recent + search engine + SSG); ~98% coverage (`npm run test:coverage`).
+- **Tests** — 194 Vitest unit tests (real JWT verification + MCP + router + edit + append + PR + recent + search engine + SSG + escaping); ~98% coverage (`npm run test:coverage`).
 - **Recently changed** — `/api/recent` GitHub-commits feed + a "Recently changed" view.
 - **Daily briefing** — deterministic `#/briefing` view (focus + next moves + open
   tensions + recent changes + inbox), assembled from the notes themselves.

@@ -1,0 +1,67 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  brain:
+    name: validate brain
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: validate (structure, links, MAP, secrets/PII)
+        run: node scripts/validate.mjs --strict
+      - name: graph gap report (informational)
+        run: node scripts/graph.mjs || true
+
+  site:
+    name: site tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - run: npm ci
+      - run: npm test
+
+  public-site:
+    name: public site build
+    runs-on: ubuntu-latest
+    steps:
+      # Full history so the SSG can derive datePublished/dateModified per note.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      # NODE_ENV=production mirrors the Cloudflare Pages build environment, which
+      # prunes devDependencies — so this fails if a build dep is misplaced.
+      - name: install (production, as Pages does)
+        run: npm ci
+        working-directory: site
+        env:
+          NODE_ENV: production
+      - name: build
+        run: npm run build:site
+        working-directory: site
+        env:
+          SITE_URL: https://vbrain.vanshul.com
+      - name: assert the SEO surface exists
+        working-directory: site
+        run: |
+          set -e
+          for f in dist/index.html dist/404.html dist/sitemap.xml dist/robots.txt dist/feed.xml dist/_headers; do
+            test -s "$f" || { echo "missing or empty: $f"; exit 1; }
+          done
+          grep -q '<lastmod>' dist/sitemap.xml || { echo "sitemap has no lastmod"; exit 1; }
+          grep -q 'noindex, nofollow' dist/404.html || { echo "404 page is indexable"; exit 1; }

@@ -83,6 +83,21 @@ Two things that are easy to get wrong on a static host, both handled here:
 3. Set `SITE_URL=https://vbrain.vanshul.com` in the Pages build environment.
 4. Pages serves the static files on the CDN — no Worker, no auth, no database.
 
+### Two gotchas that silently break the deploy
+
+- **Use the Git integration, not a one-off upload.** A direct `wrangler pages deploy dist`
+  publishes a snapshot that never updates again; the site then drifts behind `main`
+  with no error anywhere. If unknown URLs return the landing page at HTTP 200
+  instead of a 404, you are looking at a stale/upload-mode deploy.
+- **`marked` must stay in `dependencies`, not `devDependencies`.** Pages builds with
+  `NODE_ENV=production`, so `npm ci` prunes devDependencies — a build-time import
+  of a devDependency fails there while working locally. CI reproduces this by
+  installing with `NODE_ENV=production`.
+
+Set **full clone depth** in the Pages project too: the generator reads git history
+for `datePublished`/`dateModified`, and a shallow clone collapses every note to the
+same date (it still builds — it just loses the freshness signal).
+
 ## Notes / future
 
 - The OG image is an SVG. Some crawlers prefer PNG; a rasterized `og.png` is a
