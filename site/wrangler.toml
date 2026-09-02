@@ -1,0 +1,30 @@
+name = "vbrain"
+main = "src/worker.js"
+compatibility_date = "2025-01-01"
+account_id = "YOUR_CLOUDFLARE_ACCOUNT_ID"
+
+# Serve the static frontend from ./public
+assets = { directory = "./public", binding = "ASSETS" }
+
+# Custom domain (Cloudflare auto-creates the proxied DNS record on deploy).
+# Auth is handled in-Worker via Supabase Google sign-in (see README).
+[[routes]]
+pattern = "brain.example.com"
+custom_domain = true
+
+[vars]
+ALLOWED_EMAIL = "owner@example.com"
+GH_OWNER = "your-username"
+GH_REPO = "your-brain-content"
+GH_BRANCH = "main"
+# Auth: Supabase Google sign-in (no Cloudflare Access, no card). Only ALLOWED_EMAIL
+# is ever served content; anyone else who signs in gets 403. SUPABASE_URL + the
+# publishable anon key are PUBLIC (RLS-protected) — safe to keep here.
+SUPABASE_URL = "https://YOUR_PROJECT.supabase.co"
+SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY"
+
+# Secret (do NOT put here): set with `wrangler secret put GITHUB_TOKEN`
+# -> a fine-grained token with read-only Contents access to the vbrain repo.
+# For capture, also: `wrangler secret put SUPABASE_SERVICE_KEY` (service_role key).
+# For the MCP server, also: `wrangler secret put MCP_TOKEN` (a long random string).
+# For inline editing, also: `wrangler secret put GITHUB_WRITE_TOKEN` (read-write Contents).

@@ -1,0 +1,17 @@
+{
+  "name": "vbrain",
+  "private": true,
+  "type": "module",
+  "description": "Private web UI for vbrain — gated by Supabase Google sign-in to one email.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.8",
+    "wrangler": "^4.0.0"
+  }
+}

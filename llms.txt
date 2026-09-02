@@ -1,0 +1,46 @@
+# vbrain
+
+> A second brain built with vbrain: durable, refactor-safe Markdown notes about projects, learnings, and direction. MAP.md is the source of truth; this file is generated from it.
+
+Read order for agents: AGENTS.md. Rulebook: CONVENTIONS.md + STYLE.md (voice). Paths are relative to the repo root.
+
+## Entry points
+
+- [README.md](README.md): What this is + how it's built + how to run it.
+- [AGENTS.md](AGENTS.md): How an AI agent should read/write the brain.
+- [CONVENTIONS.md](CONVENTIONS.md): Rules that keep the brain consistent.
+- [RITUALS.md](RITUALS.md): Repeatable workflows (capture, review, gap-check, drain-inbox).
+- [MAP.md](MAP.md): This file — the canonical index.
+- [now.md](now.md): Living snapshot: current focus, what's live, next moves.
+- [gaps.md](gaps.md): Known unknowns: missing data, things to verify.
+- [about-me.md](about-me.md): 60-second profile + how they work.
+
+## Projects
+
+- [projects/README.md](projects/README.md): All projects, status, one-liners.
+- [projects/pixelpaws.md](projects/pixelpaws.md): A cozy browser pet game.
+- [projects/ledgerlite.md](projects/ledgerlite.md): Offline-first personal-finance PWA.
+
+## Learnings
+
+- [learnings/README.md](learnings/README.md): How the learnings are organized.
+- [learnings/engineering.md](learnings/engineering.md): Frontend/state/testing bug classes.
+
+## Ideas
+
+- [ideas/README.md](ideas/README.md): Catalog of parked/screened ideas.
+- [ideas/backlog.md](ideas/backlog.md): Screening frame + anti-patterns.
+
+## Engine (not brain content)
+
+- [site/README.md](site/README.md): The web UI + Worker + MCP server.
+- [scripts/README.md](scripts/README.md): Validator, graph, doctor, pack, drain-inbox.
+
+## Operational tips
+
+- `node scripts/validate.mjs` — structure / links / MAP coverage / secrets / voice checks (run after edits)
+- `node scripts/gen-llms.mjs` — regenerate llms.txt + llms-full.txt from MAP.md (run when notes change)
+- `node scripts/doctor.mjs` — 0–100 health score + orphans / staleness / verify-me
+- `node scripts/graph.mjs` — knowledge graph: hubs, orphans, under-connected notes
+- `node scripts/pack.mjs --full` — ad-hoc whole-brain dump to stdout for pasting into a chat
+- `node scripts/new-note.mjs <path> <title> <tldr>` — scaffold a correctly-shaped note

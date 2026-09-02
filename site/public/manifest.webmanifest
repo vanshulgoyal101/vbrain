@@ -1,0 +1,13 @@
+{
+  "name": "vbrain — second brain",
+  "short_name": "vbrain",
+  "description": "A private second brain.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0c0d12",
+  "theme_color": "#0c0d12",
+  "icons": [
+    { "src": "/brain.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

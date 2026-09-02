@@ -1,0 +1,873 @@
+# vbrain
+
+> A second brain built with vbrain: durable, refactor-safe Markdown notes about projects, learnings, and direction. MAP.md is the source of truth; this file is generated from it.
+
+Read order for agents: AGENTS.md. Rulebook: CONVENTIONS.md + STYLE.md (voice). Paths are relative to the repo root.
+
+## Entry points
+
+- [README.md](README.md): What this is + how it's built + how to run it.
+- [AGENTS.md](AGENTS.md): How an AI agent should read/write the brain.
+- [CONVENTIONS.md](CONVENTIONS.md): Rules that keep the brain consistent.
+- [RITUALS.md](RITUALS.md): Repeatable workflows (capture, review, gap-check, drain-inbox).
+- [MAP.md](MAP.md): This file — the canonical index.
+- [now.md](now.md): Living snapshot: current focus, what's live, next moves.
+- [gaps.md](gaps.md): Known unknowns: missing data, things to verify.
+- [about-me.md](about-me.md): 60-second profile + how they work.
+
+## Projects
+
+- [projects/README.md](projects/README.md): All projects, status, one-liners.
+- [projects/pixelpaws.md](projects/pixelpaws.md): A cozy browser pet game.
+- [projects/ledgerlite.md](projects/ledgerlite.md): Offline-first personal-finance PWA.
+
+## Learnings
+
+- [learnings/README.md](learnings/README.md): How the learnings are organized.
+- [learnings/engineering.md](learnings/engineering.md): Frontend/state/testing bug classes.
+
+## Ideas
+
+- [ideas/README.md](ideas/README.md): Catalog of parked/screened ideas.
+- [ideas/backlog.md](ideas/backlog.md): Screening frame + anti-patterns.
+
+## Engine (not brain content)
+
+- [site/README.md](site/README.md): The web UI + Worker + MCP server.
+- [scripts/README.md](scripts/README.md): Validator, graph, doctor, pack, drain-inbox.
+
+## Operational tips
+
+- `node scripts/validate.mjs` — structure / links / MAP coverage / secrets / voice checks (run after edits)
+- `node scripts/gen-llms.mjs` — regenerate llms.txt + llms-full.txt from MAP.md (run when notes change)
+- `node scripts/doctor.mjs` — 0–100 health score + orphans / staleness / verify-me
+- `node scripts/graph.mjs` — knowledge graph: hubs, orphans, under-connected notes
+- `node scripts/pack.mjs --full` — ad-hoc whole-brain dump to stdout for pasting into a chat
+- `node scripts/new-note.mjs <path> <title> <tldr>` — scaffold a correctly-shaped note
+
+---
+
+# Full contents
+
+## FILE: README.md
+
+# vbrain
+
+> **TL;DR** — A private, AI-queryable **second brain** — as a reusable engine.
+> Write plain Markdown notes; vbrain gives you full-text search, a live
+> knowledge graph, an MCP server so AI agents can query your notes, quick-capture,
+> and a validator that keeps everything consistent. This repo is the engine plus a
+> **fictional demo brain** so you can try it end-to-end.
+
+vbrain turns a folder of Markdown into a fast, searchable, agent-friendly
+knowledge base — served by a single Cloudflare Worker, gated to just you. Your
+notes stay in a **separate private repo**; this repo is only the engine and a
+demo persona ([Alex Rivera](about-me.md)) with fake content.
+
+> This is a demo/showcase. The notes under [projects/](projects/README.md),
+> [learnings/](learnings/README.md) and friends are **fictional** — they exist to
+> demonstrate the engine, not to describe a real person.
+
+## Why it's interesting
+
+- **Notes are just Markdown** — no lock-in, diffable, portable. The engine reads
+  them; it never owns them.
+- **Content and engine are separated** — the Worker fetches notes at runtime from
+  a *private* content repo, so you can open-source the engine without leaking a word.
+- **Built for AI agents** — an MCP server exposes your brain as tools any model can call.
+
+## Features
+
+| Area | What it does |
+|------|--------------|
+| **Search** | A real BM25-lite engine — diacritic folding, prefix + token matching, IDF/length norm, typo tolerance, operators (`"phrase"`, `-exclude`, `section:`). One shared `lib.js` powers the UI and the MCP server. |
+| **Knowledge graph** | Dependency-free force-directed SVG of every note and its links; click to open. Plus `scripts/graph.mjs` for orphans/hubs/backlinks. |
+| **MCP server** | JSON-RPC 2.0 (`/mcp`) with `search_brain`, `get_note`, `list_notes`, `get_backlinks`, `add_capture` — so Claude/Cursor/Codex can query and append to your brain. |
+| **Quick capture** | A capture box + inbox (Supabase); a bot can push a note with a bearer token, you file it later. |
+| **Auth** | Supabase Google sign-in; the Worker serves content only to one allowed email. Strict CSP + security headers on every response. |
+| **PWA** | Offline app shell; the shell is cached, your content never is. |
+| **Guardrails** | `scripts/validate.mjs` enforces structure, links, MAP coverage, and a **secret/PII scanner**; `doctor.mjs` gives a health score; CI runs it all. |
+
+## Architecture
+
+```mermaid
+flowchart LR
+  U[You / an AI agent] -->|Google sign-in or MCP token| W[Cloudflare Worker]
+  W -->|reads at runtime| C[(Private notes repo\nplain Markdown)]
+  W --> S[Search + Graph + MCP]
+  W --> I[(Supabase\ncapture inbox)]
+  subgraph This public repo
+    W
+    S
+  end
+```
+
+The engine ([site/](site/README.md)) is public and content-free. Your real notes
+live in a private repo the Worker reads with a read-only token. This demo repo
+keeps its (fake) notes alongside the engine so it runs out of the box.
+
+## Try the demo locally
+
+```bash
+cd site
+npm install
+node dev-server.mjs      # serves the fake brain with no auth/token needed
+# open http://localhost:8787  (graph at /#/graph)
+```
+
+Then explore the notes starting at [MAP.md](MAP.md), or run the tooling:
+
+```bash
+node scripts/validate.mjs      # structure, links, MAP coverage, secret scan
+node scripts/graph.mjs         # orphans, hubs, backlinks
+node scripts/doctor.mjs        # health score
+cd site && npm test            # the engine's test suite
+```
+
+## Make it your own
+
+1. **Fork** this repo — it becomes your public engine.
+2. Put your real notes in a **separate private repo** (same shape: `# H1`, a
+   `> TL;DR`, register each in [MAP.md](MAP.md); see [CONVENTIONS.md](CONVENTIONS.md)).
+3. Set the placeholders in [site/wrangler.toml](site/wrangler.toml)
+   (`ALLOWED_EMAIL`, `GH_OWNER`, `GH_REPO`, Supabase) and add secrets with
+   `wrangler secret put` (`GITHUB_TOKEN`, etc.).
+4. `wrangler deploy`. Sign in — only your email is ever served content.
+
+## How it's organized
+
+- [AGENTS.md](AGENTS.md) — how an AI agent should read/write the brain.
+- [CONVENTIONS.md](CONVENTIONS.md) — the rulebook that keeps it consistent.
+- [RITUALS.md](RITUALS.md) — repeatable workflows (capture, review, gap-check).
+- [site/](site/README.md) — the Worker, SPA, search, and MCP server.
+- [scripts/](scripts/README.md) — the zero-dependency validator/graph/doctor tools.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+## FILE: AGENTS.md
+
+# AGENTS.md — how to use this brain
+
+> **TL;DR** — This repo is a **second brain**: durable notes plus an engine that
+> makes them queryable (search, a knowledge graph, and an MCP server for AI
+> agents). Read before acting; write back what you learn. [MAP.md](MAP.md) is the
+> index; [CONVENTIONS.md](CONVENTIONS.md) is the rulebook.
+
+## Reading order
+
+0. [MAP.md](MAP.md) — the canonical index; use it to locate any topic.
+1. [README.md](README.md) — what this is and how it's built.
+2. [now.md](now.md) — the current snapshot (focus, what's live, next moves).
+3. [about-me.md](about-me.md) — the person and how they work.
+4. [projects/README.md](projects/README.md) — what exists, status, and stack.
+5. [learnings/README.md](learnings/README.md) — reusable lessons; check before building.
+6. [gaps.md](gaps.md) — the known unknowns.
+
+## Rules for writing into the brain
+
+Full rules in [CONVENTIONS.md](CONVENTIONS.md). The essentials:
+
+- **Register every new file in [MAP.md](MAP.md).** Nothing exists until it's mapped.
+- **Link to files, not headings** (refactor-safe); keep links relative.
+- **Be accurate and honest.** No hype, no invented metrics. Record dead ends.
+- **Keep entries short and factual.** Bullets over prose. This is a reference.
+- **Never store secrets.** Reference where a secret lives, never the value.
+
+## What this is NOT
+
+- Not a code repo for an app — it holds knowledge plus the engine that serves it.
+- Not a secrets vault.
+
+## FILE: CONVENTIONS.md
+
+# CONVENTIONS — how the brain stays consistent
+
+> **TL;DR** — [MAP.md](MAP.md) is the source of truth; link to files not headings;
+> give every file a `> TL;DR`; never store secrets; date stale facts; run the
+> validator. These rules keep the brain fast to read and safe to refactor.
+
+## 1. The MAP is the source of truth
+
+- [MAP.md](MAP.md) lists every note, its topic key, and a one-line summary.
+- **Every new file must be registered in MAP.md.** Navigation is hub-and-spoke.
+
+## 2. Refactor-safe linking
+
+- Internal links are **relative** and point at a **file**, not a heading. Heading
+  edits then never break a link.
+- When you move or rename a file: update its MAP row, then run the validator.
+
+## 3. Every file has the same shape
+
+```markdown
+# Title
+
+> One-line TL;DR of what this file holds.
+
+<short bullets; newest / most important first>
+```
+
+- Lead with the **`> TL;DR` blockquote** so a reader gets the gist in one line.
+- Prefer **bullets over prose**. This is a reference, not an essay.
+
+## 4. Content rules
+
+- **Accuracy over hype.** No invented metrics. Record dead ends honestly.
+- **Record unknowns**, not just knowns — log them in [gaps.md](gaps.md).
+- **Never store secrets** — reference where they live, never the value.
+- **Date anything that can go stale** with `(YYYY-MM-DD)`.
+- **Cross-link instead of duplicating.** One fact has one home.
+
+## 5. Validate
+
+Run from the repo root:
+
+```bash
+node scripts/validate.mjs          # structure, links, MAP coverage, secrets
+node scripts/validate.mjs --strict # warnings (thin content) also fail
+```
+
+Zero errors + `RESULT: PASS` = healthy. See [scripts/README.md](scripts/README.md).
+
+## FILE: RITUALS.md
+
+# RITUALS — repeatable brain workflows
+
+> **TL;DR** — Named, repeatable operations for working the brain: capture, ingest,
+> weekly-review, gap-check, and drain-inbox. Tell an agent "run the &lt;name&gt;
+> ritual" and it follows the recipe. Each keeps the brain fresh, woven, and honest.
+
+## capture — file a new fact correctly
+
+1. Decide where it goes (the right `projects/`, `learnings/`, or `ideas/` note).
+   If nothing fits, scaffold one with `node scripts/new-note.mjs <path> "Title" "TL;DR"`.
+2. Add it as a short bullet; cross-link at least one related note.
+3. `node scripts/validate.mjs` → must PASS. Register it in [MAP.md](MAP.md).
+
+## weekly-review — keep it current
+
+1. Refresh [now.md](now.md) (focus, next moves, what's live).
+2. `node scripts/graph.mjs` → weave in **orphans** and under-connected notes.
+3. `node scripts/validate.mjs --strict` → fix errors and thin-content warnings.
+4. Re-check dates on time-sensitive facts.
+
+## gap-check — what the brain is missing
+
+1. `node scripts/graph.mjs` for structural gaps (orphans, weak links, hubs).
+2. Record real unknowns in [gaps.md](gaps.md) — contradictions, missing data,
+   things to verify.
+
+## drain-inbox — file the quick-capture backlog
+
+Captures (from the web box or an agent) land in an inbox, not the brain. Drain it:
+
+1. `node scripts/drain-inbox.mjs` → lists unfiled captures with suggested target notes.
+2. File each into the right note, then mark it filed.
+
+## brainstorm — screen a new idea
+
+Run it through the frame in [ideas/backlog.md](ideas/backlog.md) and record the
+verdict in [ideas/README.md](ideas/README.md). A clear **"no" is a win**.
+
+## FILE: MAP.md
+
+# MAP — canonical index
+
+> **TL;DR** — The index of every note (topic key → path → summary). Start here to
+> find anything; update it whenever files are added, moved, or split. This is the
+> single source of truth for what lives in the brain.
+
+## Entry points
+
+| Key | Path | Summary |
+|-----|------|---------|
+| `readme` | [README.md](README.md) | What this is + how it's built + how to run it. |
+| `agents` | [AGENTS.md](AGENTS.md) | How an AI agent should read/write the brain. |
+| `conventions` | [CONVENTIONS.md](CONVENTIONS.md) | Rules that keep the brain consistent. |
+| `rituals` | [RITUALS.md](RITUALS.md) | Repeatable workflows (capture, review, gap-check, drain-inbox). |
+| `map` | [MAP.md](MAP.md) | This file — the canonical index. |
+| `now` | [now.md](now.md) | Living snapshot: current focus, what's live, next moves. |
+| `gaps` | [gaps.md](gaps.md) | Known unknowns: missing data, things to verify. |
+| `about` | [about-me.md](about-me.md) | 60-second profile + how they work. |
+
+## Projects
+
+| Key | Path | Summary |
+|-----|------|---------|
+| `projects.index` | [projects/README.md](projects/README.md) | All projects, status, one-liners. |
+| `projects.pixelpaws` | [projects/pixelpaws.md](projects/pixelpaws.md) | A cozy browser pet game. |
+| `projects.ledgerlite` | [projects/ledgerlite.md](projects/ledgerlite.md) | Offline-first personal-finance PWA. |
+
+## Learnings
+
+| Key | Path | Summary |
+|-----|------|---------|
+| `learn.index` | [learnings/README.md](learnings/README.md) | How the learnings are organized. |
+| `learn.engineering` | [learnings/engineering.md](learnings/engineering.md) | Frontend/state/testing bug classes. |
+
+## Ideas
+
+| Key | Path | Summary |
+|-----|------|---------|
+| `ideas.index` | [ideas/README.md](ideas/README.md) | Catalog of parked/screened ideas. |
+| `ideas.backlog` | [ideas/backlog.md](ideas/backlog.md) | Screening frame + anti-patterns. |
+
+## Engine (not brain content)
+
+| Key | Path | Summary |
+|-----|------|---------|
+| `site` | [site/README.md](site/README.md) | The web UI + Worker + MCP server. |
+| `scripts` | [scripts/README.md](scripts/README.md) | Validator, graph, doctor, pack, drain-inbox. |
+
+_Last updated: 2026-09-01._
+
+## FILE: now.md
+
+# Now — current focus
+
+> **TL;DR** — The living snapshot: what Alex is building this month, what's live,
+> and what's next. Refresh it whenever things change — it's the fastest way to see
+> where things stand. (Demo content for the vbrain engine.)
+
+_Snapshot date: 2026-09-01._
+
+## Focus right now
+
+- **Primary project:** [PixelPaws](projects/pixelpaws.md) — a browser pet game.
+  Polishing the save system before a public launch.
+- **Side quest:** [LedgerLite](projects/ledgerlite.md) — a personal-finance PWA;
+  waiting on real user feedback before adding features.
+- **Mode:** one project at a time, ship monthly, write a devlog for each.
+
+## What's live
+
+- pixelpaws.example.com (beta) · ledgerlite.example.com
+
+## Next moves
+
+1. Fix the offline save race in PixelPaws (see [learnings/engineering.md](learnings/engineering.md)).
+2. Write the launch devlog and post it.
+3. Talk to five LedgerLite users before touching the roadmap.
+
+## Open threads
+
+- Known unknowns are tracked in [gaps.md](gaps.md).
+- New ideas get screened in [ideas/backlog.md](ideas/backlog.md) before they earn time.
+
+## FILE: gaps.md
+
+# Gaps & unknowns
+
+> **TL;DR** — The honest negative space: what this brain does *not* yet know —
+> open questions, unverified assumptions, and decisions still to make. A second
+> brain that only stores what you know is overconfident. (Demo content.)
+
+Prefix a line with `⚠️` for a contradiction, `❓` for missing data, `🔬` for
+something to verify. When a gap closes, move the fact to its real home and delete
+the line here. Maintained by the **gap-check** ritual ([RITUALS.md](RITUALS.md)).
+
+## Missing data
+
+- ❓ **PixelPaws retention** — no numbers yet on whether players come back day two.
+- ❓ **LedgerLite demand** — zero interviews done; the roadmap is guesswork until then.
+
+## To verify
+
+- 🔬 Does the offline save race in [projects/pixelpaws.md](projects/pixelpaws.md)
+  actually cause data loss, or just a console warning? Reproduce before fixing.
+- 🔬 Is Cloudflare KV fast enough for leaderboards, or is Durable Objects needed?
+
+## Open decisions
+
+- ⚠️ Ship PixelPaws as free-with-cosmetics or a one-time unlock? Unresolved — it
+  changes the whole build order. See [projects/README.md](projects/README.md).
+
+## FILE: about-me.md
+
+# About Me
+
+> **TL;DR** — Alex Rivera, an indie developer who ships small web apps and games
+> and writes about the craft. This is demo content for the vbrain engine — a
+> fictional persona, not a real person.
+
+The 60-second version. Deeper context lives across [career/](now.md) and
+[projects/](projects/README.md).
+
+## Who
+
+- **Alex Rivera**, 29, based in a mid-size city. Backend engineer by day, indie
+  maker by night.
+- Comfortable across the stack: TypeScript, Go, Postgres, and a lot of Cloudflare
+  Workers. Learning graphics programming for fun.
+- Off-screen: bouldering, film photography, and losing at chess online.
+
+## How I work
+
+- **One project at a time.** Ship something small every month, write about what broke.
+- **Build in public** — a devlog, screenshots, and honest post-mortems.
+- Prefer **boring, durable tech** and tiny dependency trees.
+
+## Why this file exists
+
+Every note in a vbrain brain follows the same shape (an `# H1`, a `> TL;DR`
+blockquote, then short sections). That consistency is what lets the engine —
+search, the graph, the MCP server — treat the whole thing as one queryable
+knowledge base. See [CONVENTIONS.md](CONVENTIONS.md).
+
+## FILE: projects/README.md
+
+# Projects — index
+
+> **TL;DR** — Every project Alex is building, with status and a one-liner. Start
+> here to find a project, then open its note. (Demo content for vbrain.)
+
+## Active
+
+| Project | Status | One-liner |
+|---------|--------|-----------|
+| [PixelPaws](pixelpaws.md) | 🟢 Beta | A cozy browser pet game. |
+| [LedgerLite](ledgerlite.md) | 🟡 Live | A private, offline-first personal-finance PWA. |
+
+## How project notes work
+
+Each project note records the **stack**, **architecture**, **what shipped**, and
+the **gotchas** worth remembering — so future-you (or an AI agent) never
+re-derives context. The reusable lessons get promoted to
+[learnings/](../learnings/README.md).
+
+## Principles
+
+- Ship small, ship monthly. A shipped beta beats a perfect plan.
+- Write the post-mortem even when it works — that's where the lessons hide.
+- Keep the dependency tree tiny; prefer the platform over a framework.
+
+## FILE: projects/pixelpaws.md
+
+# PixelPaws
+
+> **TL;DR** — A cozy browser pet game: adopt a pixel creature, feed it, play
+> mini-games, keep a daily streak. Vanilla TS + Canvas, zero backend to play.
+> Beta at pixelpaws.example.com. (Demo content.)
+
+The current focus project. A small, self-contained web game — no install, no
+account required to play.
+
+## Stack
+
+- **Vanilla TypeScript + Canvas** — no framework, hand-written render loop.
+- **Vite** build; ships as static files to Cloudflare Pages.
+- **localStorage** for saves; optional cloud sync via a tiny Worker + KV.
+- **Vitest** for the pure game logic (`game.ts` split from `render.ts`).
+
+## What shipped
+
+- Adopt/name flow, hunger + happiness loops, three mini-games.
+- Daily streak with a shareable result card (generated 1080×1080 PNG).
+- Offline-first: the whole game works with no network.
+
+## Gotchas worth remembering
+
+- **Save race on sign-out** — clearing local state on logout wiped the daily
+  streak because the cloud copy only stored a high score, not the streak. Fix:
+  never clear local data on sign-out. Full write-up:
+  [learnings/engineering.md](../learnings/engineering.md).
+- **rAF double-loop** — starting a new render loop without cancelling the old one
+  doubled the speed on replay. Cancel at the top of `start()`.
+
+## Open questions
+
+Monetisation model is undecided — see [gaps.md](../gaps.md).
+
+## FILE: projects/ledgerlite.md
+
+# LedgerLite
+
+> **TL;DR** — A private, offline-first personal-finance PWA: track spending
+> locally, no accounts, no data leaves the device. Live at ledgerlite.example.com.
+> (Demo content for vbrain.)
+
+A small money tracker built around one principle: **your data never leaves your
+browser** unless you export it yourself.
+
+## Stack
+
+- **TypeScript + IndexedDB** — all data local; no server, no analytics on input.
+- **Installable PWA** — service worker caches the app shell for offline use.
+- **Pure logic in `lib.ts`**, unit-tested; the UI is a thin DOM layer.
+
+## What shipped
+
+- Add/edit transactions, categories, and a monthly summary.
+- CSV import/export (client-side; nothing uploaded).
+- Charts drawn with Canvas — no charting dependency.
+
+## Why it matters
+
+It's a proof that a genuinely useful tool can be **privacy-first by construction**
+— the thing that ships is the thing that's tested, and there's no backend to leak.
+
+## Next
+
+Waiting on real user feedback before adding features — see [now.md](../now.md)
+and the screening frame in [ideas/backlog.md](../ideas/backlog.md).
+
+## FILE: learnings/README.md
+
+# Learnings — index
+
+> **TL;DR** — Reusable, hard-won lessons distilled from the projects. Check here
+> before building to avoid re-hitting a known trap. (Demo content for vbrain.)
+
+The real gold in a second brain: lessons that outlive the project that taught
+them. Organized by domain so each lesson has one home.
+
+| File | Covers |
+|------|--------|
+| [engineering.md](engineering.md) | Frontend/JS/state bug classes + testing patterns. |
+
+## The meta-lessons
+
+- **Pure logic, separate from view.** Split `game.ts` (pure, tested) from
+  `render.ts` (DOM/Canvas). Testing gets trivial.
+- **Guard state transitions synchronously** at the top of a handler — the root of
+  most double-fire and stale-state bugs.
+- **Verify live before fixing.** Many "bugs" are stale caches or a service worker,
+  not real defects. Reproduce first. See [projects/pixelpaws.md](../projects/pixelpaws.md).
+
+## FILE: learnings/engineering.md
+
+# Engineering learnings
+
+> **TL;DR** — Frontend/state/testing bug classes that keep recurring, and the
+> fixes that stuck. Written so future-me stops re-learning them. (Demo content.)
+
+## State & lifecycle
+
+- **Never clear local data on sign-out.** In [PixelPaws](../projects/pixelpaws.md)
+  the daily streak lived only in the local blob; the cloud copy stored a high
+  score, not the streak. Wiping local state on logout deleted the streak for good.
+  Sign-out should end the session and *keep* local data.
+- **Cancel before you start.** A render loop started without cancelling the
+  previous `requestAnimationFrame` runs twice as fast on replay. Cancel at the top
+  of `start()`.
+- **Guard double-submit synchronously.** Set the "busy" flag before any `await`,
+  not after — otherwise a fast second click slips through.
+
+## Caching & PWAs
+
+- **Bump the asset version** when you edit a non-hashed file, or the service
+  worker keeps serving the old one.
+- **Network-first for documents, cache-first for hashed assets.** Mixing them up
+  is why "my change didn't deploy" is usually a cache, not a build.
+
+## Testing
+
+- Test the **pure logic**, not the DOM. If logic is hard to test, it's too coupled
+  to the view — split it. See [learnings/README.md](README.md).
+
+## FILE: ideas/README.md
+
+# Ideas — index
+
+> **TL;DR** — The idea catalog: what's parked, what's been screened, and the bar
+> an idea must clear before it earns build time. (Demo content for vbrain.)
+
+Ideas are cheap; focus is expensive. Everything here gets screened through
+[backlog.md](backlog.md) before it competes for the one active project slot.
+
+## Parked
+
+- **Habit-streak widget** — a tiny embeddable streak tracker. Maybe a PixelPaws spin-off.
+- **Markdown → slides** — turn a note into a deck. Fun, unclear demand.
+
+## Rule
+
+A clear **"no" is a win** — it saves months. Only a clear pass earns a note and a
+small first experiment. See the screening frame in [backlog.md](backlog.md).
+
+## FILE: ideas/backlog.md
+
+# Idea backlog & screening
+
+> **TL;DR** — The forcing questions every idea must answer before it earns time,
+> plus the anti-patterns to avoid. Keeps the catalog honest. (Demo content.)
+
+## Screening frame (answer for each new idea)
+
+1. **Who** feels this pain today, and how do I know?
+2. **What** do they use now, and why isn't it enough?
+3. **Wedge** — the smallest thing I could ship in two weeks.
+4. **Fit** — can I build it solo, alongside the day job?
+5. **Proof** — what result would tell me to keep going (or stop)?
+
+## Anti-patterns
+
+- Building a second thing before the first has users.
+- "It'd be cool if…" with no one waiting for it.
+- Competing on price in a category owned by free, funded incumbents.
+
+## Verdicts
+
+Record each screened idea as ❌ (no), 🟡 (maybe later), or ✅ (build) in
+[ideas/README.md](README.md). A clean "no" is the most valuable outcome.
+
+## FILE: site/README.md
+
+# brain.example.com — private web UI for vbrain
+
+A Cloudflare Worker that serves a web reader for the brain, gated so **only
+`owner@example.com`** can access it. Content is fetched **live from the
+private `vbrain` GitHub repo** (nothing is bundled publicly).
+
+## How the security works
+
+1. **Supabase Google sign-in** — the SPA sends you through Supabase's Google OAuth
+   (the same "portfolio" project the arcade uses). Supabase mints a short-lived
+   ES256 access token.
+2. The **Worker verifies that token** on every `/api` call: it fetches Supabase's
+   JWKS, checks the signature (ES256), `exp`, `aud`, issuer, and finally that the
+   email claim equals **`owner@example.com`** — so content can't leak even via
+   the `*.workers.dev` URL. Anyone can sign in with Google, but only that one email
+   is served content (everyone else gets `403`).
+3. Markdown is pulled from the **private** repo with a **read-only `GITHUB_TOKEN`**
+   secret (never committed).
+
+The Supabase **anon key** is publishable (RLS-protected) and lives in `wrangler.toml`;
+the Worker exposes it (plus the Supabase URL) at the public `GET /auth/config`
+endpoint so the browser can start the login flow.
+
+GitHub Pages is intentionally **not** used — it's static/public and can't gate a
+single user.
+
+## One-time setup
+
+### 1. Deploy the Worker
+```bash
+cd site
+npm install
+npx wrangler deploy         # creates the worker + brain.example.com custom domain (proxied DNS)
+```
+
+### 2. Add the GitHub read token (secret)
+Create a **fine-grained personal access token** with **Contents: Read-only** on the
+`vbrain` repo, then:
+```bash
+npx wrangler secret put GITHUB_TOKEN   # paste the token when prompted (never in chat)
+```
+
+### 3. Configure Supabase Google auth (the gate)
+The brain reuses the existing **"portfolio"** Supabase project (`YOUR_PROJECT`):
+- **Google provider** is already enabled on that project (shared with the arcade).
+- Add `https://brain.example.com/**` (and `http://localhost:8787/**` for local dev)
+  to the project's **Auth → URL Configuration → Redirect URLs** allowlist.
+- `wrangler.toml` `[vars]` already carries the non-secret config:
+```toml
+SUPABASE_URL      = "https://YOUR_PROJECT.supabase.co"
+SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY"
+ALLOWED_EMAIL     = "owner@example.com"
+```
+```bash
+npx wrangler deploy
+```
+
+### 4. Lock the back door (recommended)
+Disable the `*.workers.dev` route for this Worker (Cloudflare dashboard → Worker →
+Settings → Domains & Routes) so the only entry is the custom domain.
+(The JWT check already refuses non-allowed requests, but this removes the surface.)
+
+## Result
+
+Visit **https://brain.example.com** → the SPA shows a **Sign in with Google** button
+→ Supabase Google login → only `owner@example.com` is served content (nav, search,
+markdown). Anyone else can sign in but gets a `403` and never reaches the content.
+
+## Updating content
+
+The brain updates when you push to the `vbrain` repo `main` branch. The Worker
+caches the bundle for ~5 minutes; a hard refresh after that shows changes.
+
+## Optional: quick-capture inbox (Supabase)
+
+Jot a thought from the sidebar → it's stored in the existing **"portfolio"**
+Supabase project (`YOUR_PROJECT`), table `public.vbrain_captures`, then
+file it into the brain later (see the `capture` ritual in [../RITUALS.md](../RITUALS.md)).
+
+- Migration (already applied): `supabase/vbrain.sql`. RLS on, **service-role only**,
+  so captures stay private and the public anon key can't touch them.
+- To enable: set `SUPABASE_URL` in `wrangler.toml` `[vars]` and
+  `wrangler secret put SUPABASE_SERVICE_KEY` (the project's `service_role` key),
+  then `wrangler deploy`. Leave `SUPABASE_URL` blank to keep the feature off.
+
+## Local dev
+```bash
+node dev-server.mjs   # read-only preview at http://localhost:8787 (no token / Access needed)
+npx wrangler dev      # runs the real Worker locally; /api needs Access vars + token for content
+```
+
+## Files
+- `src/worker.js` — routing: `/healthz`, `/mcp`, `/api/*` (Access JWT) + content proxy.
+- `src/` — modular backend (`access`, `content`, `captures`, `search`, `mcp`, `edit`, `http`).
+- `public/` — the static frontend (`index.html`, `app.js`, `lib.js`, `styles.css`, `files/`).
+- `dev-server.mjs` — dependency-free local preview server.
+- `wrangler.toml` — config + non-secret vars.
+
+## Docs
+
+Start at [docs/README.md](docs/README.md) — the documentation index.
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — request flow, modules, content flow.
+- [docs/API.md](docs/API.md) — endpoint reference (`/healthz`, `/api/*`, `/files/*`, `/mcp`).
+- [docs/DATABASE.md](docs/DATABASE.md) — the capture table, RLS model, migration.
+- [docs/SECURITY.md](docs/SECURITY.md) — threat model, headers, the private/no-SEO decision.
+- [docs/MCP.md](docs/MCP.md) — the MCP server (query the brain from any AI agent).
+- [docs/TESTING.md](docs/TESTING.md) — how the test suite works.
+- [docs/ROADMAP.md](docs/ROADMAP.md) — shipped + proposed features.
+
+## Develop & test
+
+```bash
+cd site
+npm install
+    npm test            # 136 Vitest unit tests
+npm run dev         # local Worker (needs Access vars + secrets for /api)
+```
+
+## FILE: scripts/README.md
+
+# Scripts — validating the brain
+
+> **TL;DR** — Zero-dependency Node scripts that keep vbrain healthy: `validate.mjs`
+> checks structure, links, MAP coverage, completeness, and secret/PII leakage;
+> `new-note.mjs` scaffolds a correctly-shaped note. No installs needed.
+
+## validate.mjs — the health check
+
+```bash
+node scripts/validate.mjs           # report; exits 1 on any ERROR
+node scripts/validate.mjs --strict  # warnings also fail (use in CI)
+node scripts/validate.mjs --quiet   # only show failures + summary
+```
+
+**ERROR (always fails):**
+
+- Missing H1 title on the first line.
+- Missing `> TL;DR` blockquote in the first 6 lines.
+- File not registered in [MAP.md](../MAP.md) (and no dangling MAP rows).
+- Broken internal link (a `.md` or folder target that doesn't exist).
+- Duplicate consecutive lines.
+- A stale/missing `llms.txt` or `llms-full.txt` (run `gen-llms.mjs` — see below).
+- A possible **secret or PII** (API keys, tokens, private keys, PAN, Aadhaar-like
+  numbers) — the brain must never store these.
+
+**WARN (fails only with `--strict`):**
+
+- **Thin content** — fewer than 8 non-blank lines or 50 words ("a lot of
+  information" check).
+- No `##` section headings.
+- **AI-slop vocabulary** — filler words banned by [STYLE.md](../STYLE.md)
+  (delve, seamless, comprehensive, plethora, ...); prose only, code is skipped.
+
+It also prints a summary: file count, total words, average words/file, and MAP
+coverage.
+
+## gen-llms.mjs — the machine-readable indexes
+
+```bash
+node scripts/gen-llms.mjs          # write llms.txt + llms-full.txt at the repo root
+node scripts/gen-llms.mjs --check  # exit 1 if either file is stale (CI)
+```
+
+Generates two committed files from [MAP.md](../MAP.md), the single source of truth
+(so they can't drift), mirroring gbrain's `build:llms`:
+
+- **`llms.txt`** — a compact, sectioned index (llmstxt.org style) plus operational
+  tips; hand an agent the whole topology in one fetch.
+- **`llms-full.txt`** — the same index with every note inlined, for single-fetch
+  context ingestion.
+
+The validator fails if either is stale, so **run this after adding, moving, or
+splitting a note** (right after updating MAP.md). Set `LLMS_REPO_BASE` to emit
+absolute raw URLs instead of relative paths.
+
+## new-note.mjs — scaffold a note
+
+```bash
+node scripts/new-note.mjs projects/foo.md "Foo" "What Foo is, in one line."
+```
+
+Creates a file with the correct header shape and prints the exact MAP.md row to
+add (registering in the MAP is required — see [CONVENTIONS.md](../CONVENTIONS.md)).
+
+```bash
+node scripts/new-note.mjs projects/foo.md "Foo" "What Foo is, in one line."
+```
+
+Creates a file with the correct header shape and prints the exact MAP.md row to
+add (registering in the MAP is required — see [CONVENTIONS.md](../CONVENTIONS.md)).
+
+## graph.mjs — knowledge graph + gap analysis
+
+```bash
+node scripts/graph.mjs                    # hubs, orphans, under-connected notes
+node scripts/graph.mjs --backlinks career/profile.md   # who links to a note
+node scripts/graph.mjs --json             # the raw link graph
+```
+
+Inspired by gbrain's self-wiring graph: keeps notes woven together instead of a
+pile of disconnected files. **Orphans** (only reachable via MAP) and
+**under-connected** notes are the things to weave in.
+
+## pack.mjs — export the brain for an LLM
+
+```bash
+node scripts/pack.mjs                      # index: file -> TL;DR (llms.txt style)
+node scripts/pack.mjs --full --out brain.txt   # whole brain in one file
+```
+
+Inspired by gbrain's `llms-full.txt` and ctx's `pack_repo` — hand the entire brain
+to any chat in one paste.
+
+## doctor.mjs — health score + one-shot report
+
+```bash
+node scripts/doctor.mjs          # 0–100 score + metric breakdown, orphans,
+                                 # under-connected, thin, staleness, verify-me
+node scripts/doctor.mjs --json   # machine-readable snapshot (track the trend)
+```
+
+Inspired by gbrain's `doctor` + gstack's `health`. The score is a weighted blend of
+MAP **coverage**, **linkage** (few orphans), **connectivity**, **freshness**
+(now.md age), **staleness**, and **depth** (not thin), and it lists **Verify-me**
+(oldest-touched notes = best re-check candidates). Advisory (exit 1 = needs
+attention); the hard gate is `validate.mjs`. Append `--json` to a log to watch the
+score over time.
+
+## drain-inbox.mjs — file the capture backlog
+
+```bash
+node scripts/drain-inbox.mjs            # unfiled captures + suggested target notes
+node scripts/drain-inbox.mjs --json     # machine-readable plan
+node scripts/drain-inbox.mjs --limit 50 # cap how many to pull
+```
+
+Reads the unfiled rows from the Supabase capture inbox and ranks the best note to
+file each into (same ranker as the web `#/inbox`). Read-only — it suggests; you
+file via the UI's **File into note** button or by editing the note. Creds: env
+`SUPABASE_URL` + `SUPABASE_SERVICE_KEY`, or a `SUPABASE_TOKEN` PAT (env or
+`../arcade/.env`) to reveal the service key. See the **drain-inbox** ritual in
+[../RITUALS.md](../RITUALS.md).
+
+## When to run
+
+- **After adding or editing** any note (catches broken links / missing TL;DR / thin content).
+- **After a refactor / file move** (catches broken links + unmapped/dangling MAP rows).
+- Before considering the brain "done" for a session.
+
+## Requirements
+
+Node (any recent version). In the sandbox, prefix with the nvm path if `node`
+isn't resolved:
+`export PATH="$HOME/.nvm/versions/node/v22.12.0/bin:$PATH"`.
+
