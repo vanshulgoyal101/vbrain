@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   urlForPath, filePathFor, escapeHtml, metaDescription, pageTitle, rewriteLinks, stripLeadingH1,
   renderRobots, renderHeaders, renderSitemap, breadcrumbJsonLd, articleJsonLd, htmlShell,
-  urlForSection, filePathForSection, sectionGroups, renderFeed, addHeadingIds, tocHtml, sectionReadmeOf, metaProblems, renderRedirects,
+  urlForSection, filePathForSection, sectionGroups, renderFeed, addHeadingIds, tocHtml, sectionReadmeOf, metaProblems, renderRedirects, jsonLdScript,
 } from '../src/ssg.js';
 
 const BASE = 'https://vbrain.example.com';
@@ -111,6 +111,24 @@ describe('rewriteLinks', () => {
   it('leaves the link alone when no repo URL is configured', () => {
     const out = rewriteLinks('<a href="site/README.md">d</a>', 'README.md', new Set(['README.md']), '');
     expect(out).toBe('<a href="site/README.md">d</a>');
+  });
+});
+
+describe('jsonLdScript', () => {
+  // Built at runtime so the literal string isn't in the source.
+  const evil = `</${'script'}><img src=x onerror=alert(1)>`;
+
+  it('cannot be closed early by a value containing a script tag', () => {
+    const out = jsonLdScript({ headline: evil });
+    expect(out).not.toContain('</script><img');
+    expect(out.match(/<\/script>/g)).toHaveLength(1); // only the real terminator
+  });
+  it('stays valid JSON that round-trips to the original value', () => {
+    const body = jsonLdScript({ headline: evil }).replace(/^<script[^>]*>|<\/script>$/g, '');
+    expect(JSON.parse(body).headline).toBe(evil);
+  });
+  it('escapes the line separators that break inline scripts', () => {
+    expect(jsonLdScript({ a: '\u2028\u2029' })).toContain('\\u2028\\u2029');
   });
 });
 

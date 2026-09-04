@@ -277,10 +277,25 @@ export function renderRedirects(sections) {
   return lines.length ? `${lines.join('\n')}\n` : '';
 }
 
+// Serialize JSON-LD for embedding in a <script> block. JSON.stringify does not
+// escape `<`, so a note titled `</script><img onerror=…>` would close the block
+// early and inject HTML into every page that cites it. Unicode-escaping the four
+// dangerous characters keeps the JSON valid (parsers decode \u003c) while making
+// early termination impossible.
+export function jsonLdScript(obj) {
+  const json = JSON.stringify(obj)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+  return `<script type="application/ld+json">${json}</script>`;
+}
+
 // The full HTML document with SEO meta, Open Graph, Twitter, canonical, and any
 // JSON-LD blocks. `indexable=false` emits a noindex robots tag.
 export function htmlShell({ title, description, canonical, base, bodyHtml, jsonLd = [], ogImage = '/og.png', indexable = true, themeColor = '#0c0d12', ogType = 'website', feedUrl = '', modified = '' }) {
-  const ld = jsonLd.filter(Boolean).map((o) => `<script type="application/ld+json">${JSON.stringify(o)}</script>`).join('\n  ');
+  const ld = jsonLd.filter(Boolean).map(jsonLdScript).join('\n  ');
   const robots = indexable ? 'index, follow' : 'noindex, nofollow';
   const feed = feedUrl ? `\n  <link rel="alternate" type="application/rss+xml" title="${escapeHtml(title)}" href="${escapeHtml(feedUrl)}" />` : '';
   const mod = modified ? `\n  <meta property="article:modified_time" content="${escapeHtml(modified)}" />` : '';
