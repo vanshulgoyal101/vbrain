@@ -24,12 +24,23 @@
 2. Record real unknowns in [gaps.md](gaps.md) — contradictions, missing data,
    things to verify.
 
+## trace — how did my thinking about X evolve?
+
+Before rewriting a stance, check what you already believed and why.
+
+1. `node scripts/lineage.mjs "<term>"` → first wording, the commits that reworked
+   it, and every note it lives in today.
+2. If the current notes disagree with the earlier wording, that's a **reversal** —
+   record it (what changed and why) rather than silently overwriting history.
+3. If it appears in history but in no current note, decide: revive it or let it go.
+
 ## drain-inbox — file the quick-capture backlog
 
 Captures (from the web box or an agent) land in an inbox, not the brain. Drain it:
 
 1. `node scripts/drain-inbox.mjs` → lists unfiled captures with suggested target notes.
 2. File each into the right note, then mark it filed.
+3. `node scripts/drain-inbox.mjs --filed` reads back anything already marked filed.
 
 ## brainstorm — screen a new idea
 

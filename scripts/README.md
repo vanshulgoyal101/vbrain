@@ -106,12 +106,31 @@ MAP **coverage**, **linkage** (few orphans), **connectivity**, **freshness**
 attention); the hard gate is `validate.mjs`. Append `--json` to a log to watch the
 score over time.
 
+## lineage.mjs — how did my thinking about X evolve?
+
+```bash
+node scripts/lineage.mjs "high agency"   # first wording, timeline, where it lives now
+node scripts/lineage.mjs adbrain --json  # machine-readable
+```
+
+Inspired by gbrain's `idea-lineage`, but **deterministic** — the whole answer comes
+from git history, so there's no model, API key, or cost. It uses git's **pickaxe**
+(`-S`), which matches only commits where the *number of occurrences* changed, so
+the timeline shows where an idea was actually introduced or reworked rather than
+every commit that touched the file.
+
+Separators are interchangeable: `high agency` also finds `high-agency` and
+`high_agency`, because notes spell the same idea several ways. Exit 1 when the
+term appears nowhere. If a term shows up in history but in no current note, it
+says so — the idea was dropped.
+
 ## drain-inbox.mjs — file the capture backlog
 
 ```bash
 node scripts/drain-inbox.mjs            # unfiled captures + suggested target notes
 node scripts/drain-inbox.mjs --json     # machine-readable plan
 node scripts/drain-inbox.mjs --limit 50 # cap how many to pull
+node scripts/drain-inbox.mjs --filed    # read back captures already marked filed
 ```
 
 Reads the unfiled rows from the Supabase capture inbox and ranks the best note to

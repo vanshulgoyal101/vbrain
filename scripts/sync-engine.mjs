@@ -32,7 +32,7 @@ const SHARED_FILES = [
   'site/public/app.js', 'site/public/lib.js', 'site/public/sw.js', 'site/public/styles.css',
   'site/vitest.config.js',
   'scripts/validate.mjs', 'scripts/graph.mjs', 'scripts/doctor.mjs',
-  'scripts/new-note.mjs', 'scripts/drain-inbox.mjs',
+  'scripts/new-note.mjs', 'scripts/drain-inbox.mjs', 'scripts/lineage.mjs',
 ];
 const SHARED_DIRS = ['site/public/vendor'];
 
