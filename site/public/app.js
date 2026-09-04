@@ -24,6 +24,19 @@ let recentEnabled = false;
 let INBOX = [];
 let navItems = [];   // current visible nav paths (for keyboard nav)
 
+const viewIcon = (id) => {
+  const paths = {
+    briefing: '<path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/><circle cx="12" cy="12" r="7.5"/>',
+    graph: '<circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="17" r="2.2"/><circle cx="19" cy="17" r="2.2"/><path d="m10.6 6.8-4.2 8.4M13.4 6.8l4.2 8.4M7.2 17h9.6"/>',
+    recent: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.2 2"/>',
+  };
+  const svg = document.createElement('span');
+  svg.className = 'view-icon';
+  svg.setAttribute('aria-hidden', 'true');
+  svg.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${paths[id] || paths.briefing}</svg>`;
+  return svg;
+};
+
 // ── Supabase Google auth ────────────────────────────────────────────────────
 const SESSION_KEY = 'vbrain.session';
 let AUTH = { supabaseUrl: null, anonKey: null };
@@ -160,10 +173,10 @@ function buildNav(filter = '') {
   navItems = [];
   // pinned views
   const vg = document.createElement('div'); vg.className = 'group'; vg.textContent = 'Views'; nav.appendChild(vg);
-  const addView = (id, label) => { const a = document.createElement('a'); a.className = 'item' + (current === id ? ' active' : ''); a.href = '#/' + id; a.textContent = label; nav.appendChild(a); navItems.push(id); };
-  addView('briefing', '☀ Briefing');
-  addView('graph', '🕸 Graph');
-  if (recentEnabled) addView('recent', '🕒 Recent');
+  const addView = (id, label) => { const a = document.createElement('a'); a.className = 'item' + (current === id ? ' active' : ''); a.href = '#/' + id; a.append(viewIcon(id), document.createTextNode(label)); nav.appendChild(a); navItems.push(id); };
+  addView('briefing', 'Briefing');
+  addView('graph', 'Graph');
+  if (recentEnabled) addView('recent', 'Recent');
   const bySection = {};
   for (const path of Object.keys(FILES)) (bySection[sectionOf(path)] ||= []).push(path);
   const sections = [...new Set([...SECTION_ORDER, ...Object.keys(bySection)])];
