@@ -8,17 +8,31 @@ import { sectionOf, titleOf, resolvePath, escapeHtml, slugify } from '../public/
 // Re-exported so the SSG has one obvious import surface (and one escaper).
 export { escapeHtml };
 
+// 'projects/README.md' → 'projects'. A section's README *is* that section's hub:
+// emitting it separately would put two near-identical pages ('/projects/' and
+// '/projects/README') in the sitemap competing for the same query.
+export function sectionReadmeOf(path) {
+  const m = /^([^/]+)\/README\.md$/.exec(String(path || ''));
+  return m ? m[1] : '';
+}
+
 // A note path → the site URL (clean, no .html — Cloudflare Pages serves and
 // prefers extensionless URLs). README.md is the home page ("/").
 export function urlForPath(path) {
   if (path === 'README.md') return '/';
+  const sec = sectionReadmeOf(path);
+  if (sec) return `/${sec}/`;
   return '/' + path.replace(/\.md$/, '');
 }
 
 // A note path → its on-disk output file (what the SSG writes). README is the
-// landing index; every other note is `<path>.html`.
+// landing index; a section README is that section's index; everything else is
+// `<path>.html`.
 export function filePathFor(path) {
-  return path === 'README.md' ? 'index.html' : path.replace(/\.md$/, '.html');
+  if (path === 'README.md') return 'index.html';
+  const sec = sectionReadmeOf(path);
+  if (sec) return `${sec}/index.html`;
+  return path.replace(/\.md$/, '.html');
 }
 
 // Section hub pages: `/projects/` etc. The BreadcrumbList links these, so they
@@ -230,6 +244,28 @@ export function articleJsonLd(path, md, base, siteName, author, dates = {}) {
     author: { '@type': 'Person', name: author },
     isPartOf: { '@type': 'WebSite', name: siteName, url: base + '/' },
   };
+}
+
+// Duplicate or missing titles/descriptions are the two metadata faults that cost
+// rankings outright: two pages competing for one query, or a page search engines
+// have nothing to show for. `pages` is [{ path, title, description }].
+export function metaProblems(pages) {
+  const problems = [];
+  const byTitle = new Map();
+  const byDesc = new Map();
+  for (const p of pages) {
+    if (!p.title) problems.push(`${p.path}: missing <title>`);
+    if (!p.description) problems.push(`${p.path}: missing meta description`);
+    if (p.title) byTitle.set(p.title, [...(byTitle.get(p.title) || []), p.path]);
+    if (p.description) byDesc.set(p.description, [...(byDesc.get(p.description) || []), p.path]);
+  }
+  for (const [title, paths] of byTitle) {
+    if (paths.length > 1) problems.push(`duplicate <title> "${title}" on ${paths.join(', ')}`);
+  }
+  for (const [desc, paths] of byDesc) {
+    if (paths.length > 1) problems.push(`duplicate description "${desc.slice(0, 40)}…" on ${paths.join(', ')}`);
+  }
+  return problems;
 }
 
 // The full HTML document with SEO meta, Open Graph, Twitter, canonical, and any

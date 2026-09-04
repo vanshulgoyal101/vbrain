@@ -78,6 +78,11 @@ Two things that are easy to get wrong on a static host, both handled here:
 - **Breadcrumbs point at real pages.** The `BreadcrumbList` links `/projects/`, so
   every section gets a genuine hub page (also listed in the sitemap) instead of a
   crumb that resolves to a soft 404.
+- **A section's README *is* its hub.** `projects/README.md` renders at `/projects/`,
+  not at a second `/projects/README` URL. Publishing both meant two near-identical
+  pages competing for the same query, with the thin generated one holding the
+  canonical slot — so the hub now carries the README's real content plus the list
+  of notes in that section.
 
 ## Architecture
 
@@ -91,6 +96,9 @@ Two things that are easy to get wrong on a static host, both handled here:
 - **The build fails on a broken internal link.** After writing `dist`, every
   internal `href` is resolved against the files actually produced; anything that
   misses aborts the build, so a hard 404 can never ship.
+- **The build fails on duplicate or missing metadata.** Two pages sharing a
+  `<title>` or description compete for the same query, and a page without a
+  description gives search engines nothing to show — both abort the build.
 
 ## Deploy (Cloudflare Pages, from CI)
 

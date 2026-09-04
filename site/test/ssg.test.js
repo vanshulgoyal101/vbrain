@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   urlForPath, filePathFor, escapeHtml, metaDescription, pageTitle, rewriteLinks, stripLeadingH1,
   renderRobots, renderHeaders, renderSitemap, breadcrumbJsonLd, articleJsonLd, htmlShell,
-  urlForSection, filePathForSection, sectionGroups, renderFeed, addHeadingIds, tocHtml,
+  urlForSection, filePathForSection, sectionGroups, renderFeed, addHeadingIds, tocHtml, sectionReadmeOf, metaProblems,
 } from '../src/ssg.js';
 
 const BASE = 'https://vbrain.example.com';
@@ -13,12 +13,38 @@ describe('urlForPath', () => {
     expect(urlForPath('projects/pixelpaws.md')).toBe('/projects/pixelpaws');
     expect(urlForPath('now.md')).toBe('/now');
   });
+  it('maps a section README onto the section hub, not a second URL', () => {
+    expect(urlForPath('projects/README.md')).toBe('/projects/');
+    expect(urlForPath('learnings/README.md')).toBe('/learnings/');
+  });
+});
+
+describe('sectionReadmeOf', () => {
+  it('recognises a top-level section README', () => {
+    expect(sectionReadmeOf('projects/README.md')).toBe('projects');
+  });
+  it('ignores the root README, ordinary notes and deeper paths', () => {
+    expect(sectionReadmeOf('README.md')).toBe('');
+    expect(sectionReadmeOf('projects/pixelpaws.md')).toBe('');
+    expect(sectionReadmeOf('a/b/README.md')).toBe('');
+    expect(sectionReadmeOf(undefined)).toBe('');
+  });
 });
 
 describe('filePathFor', () => {
   it('writes README to index.html and notes to <path>.html', () => {
     expect(filePathFor('README.md')).toBe('index.html');
     expect(filePathFor('projects/pixelpaws.md')).toBe('projects/pixelpaws.html');
+  });
+  it('writes a section README as that section index', () => {
+    expect(filePathFor('projects/README.md')).toBe('projects/index.html');
+  });
+  it('agrees with urlForPath so links never point at an unwritten file', () => {
+    for (const p of ['README.md', 'now.md', 'projects/README.md', 'projects/pixelpaws.md']) {
+      const url = urlForPath(p);
+      const file = filePathFor(p);
+      expect(url.endsWith('/') ? `${url.slice(1)}index.html` : `${url.slice(1)}.html`).toBe(file);
+    }
   });
 });
 
@@ -85,6 +111,34 @@ describe('rewriteLinks', () => {
   it('leaves the link alone when no repo URL is configured', () => {
     const out = rewriteLinks('<a href="site/README.md">d</a>', 'README.md', new Set(['README.md']), '');
     expect(out).toBe('<a href="site/README.md">d</a>');
+  });
+});
+
+describe('metaProblems', () => {
+  it('passes when every page has a unique title and description', () => {
+    expect(metaProblems([
+      { path: 'a.html', title: 'A', description: 'about a' },
+      { path: 'b.html', title: 'B', description: 'about b' },
+    ])).toEqual([]);
+  });
+  it('reports a missing title or description', () => {
+    const out = metaProblems([{ path: 'a.html', title: '', description: '' }]);
+    expect(out).toContain('a.html: missing <title>');
+    expect(out).toContain('a.html: missing meta description');
+  });
+  it('reports two pages competing with the same title', () => {
+    const out = metaProblems([
+      { path: 'projects/index.html', title: 'Projects', description: 'x' },
+      { path: 'projects/README.html', title: 'Projects', description: 'y' },
+    ]);
+    expect(out.join('\n')).toMatch(/duplicate <title> "Projects" on projects\/index\.html, projects\/README\.html/);
+  });
+  it('reports a duplicated description', () => {
+    const out = metaProblems([
+      { path: 'a.html', title: 'A', description: 'same summary' },
+      { path: 'b.html', title: 'B', description: 'same summary' },
+    ]);
+    expect(out.join('\n')).toMatch(/duplicate description/);
   });
 });
 

@@ -18,8 +18,8 @@ import { Resvg } from '@resvg/resvg-js';
 import { titleOf, sectionOf, graphData } from './public/lib.js';
 import {
   urlForPath, filePathFor, escapeHtml, metaDescription, pageTitle, rewriteLinks, stripLeadingH1,
-  renderRobots, renderHeaders, renderSitemap, breadcrumbJsonLd, articleJsonLd, htmlShell,
-  urlForSection, filePathForSection, sectionGroups, renderFeed, addHeadingIds, tocHtml,
+  renderRobots, renderHeaders, renderSitemap, breadcrumbJsonLd, articleJsonLd, htmlShell, metaProblems,
+  urlForSection, filePathForSection, sectionGroups, renderFeed, addHeadingIds, tocHtml, sectionReadmeOf,
 } from './src/ssg.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -76,6 +76,9 @@ const DATES = Object.fromEntries(paths.map((p) => [p, datesFor(p)]));
 
 // Section → its notes, for hub pages and sibling ("More in …") links.
 const SECTIONS = sectionGroups(paths);
+// A section README is rendered as that section's hub, so it never appears as one
+// of the section's own entries.
+const membersOf = (sec) => (SECTIONS.get(sec) || []).filter((p) => !sectionReadmeOf(p));
 const titleCase = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const BRAND_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/></svg>';
@@ -94,7 +97,7 @@ function renderNote(path) {
     : '';
   const sec = sectionOf(path);
   // Sibling notes in the same section — internal linking so no note is a dead end.
-  const siblings = (SECTIONS.get(sec) || []).filter((p) => p !== path);
+  const siblings = membersOf(sec).filter((p) => p !== path);
   const siblingHtml = siblings.length
     ? `<nav class="siblings"><h2>More in ${escapeHtml(titleCase(sec))}</h2><ul>${siblings.map((s) => `<li><a href="${escapeHtml(urlForPath(s))}">${escapeHtml(titleOf(files[s], s))}</a></li>`).join('')}</ul></nav>`
     : '';
@@ -114,16 +117,26 @@ function renderNote(path) {
 
 // ── section hub page (/projects/) ────────────────────────────────────────────
 // The breadcrumb JSON-LD points here, so these must be real, indexable pages.
+// When the section has a README it IS this page — rendering it separately would
+// publish two near-identical URLs competing for the same query, with the thinner
+// one holding the canonical slot.
 function renderSection(sec, secPaths) {
-  const name = titleCase(sec);
+  const readmePath = `${sec}/README.md`;
+  const readme = files[readmePath];
+  const name = readme ? titleOf(readme, readmePath) : titleCase(sec);
   const cards = secPaths.map((p) => (
     `<li><a href="${escapeHtml(urlForPath(p))}"><span class="t">${escapeHtml(titleOf(files[p], p))}</span><span class="d">${escapeHtml(metaDescription(files[p], 90))}</span></a></li>`
   )).join('');
-  const description = `${secPaths.length} note${secPaths.length === 1 ? '' : 's'} in ${name} — part of the ${SITE_NAME} demo brain.`;
+  const description = readme
+    ? metaDescription(readme)
+    : `${secPaths.length} note${secPaths.length === 1 ? '' : 's'} in ${name} — part of the ${SITE_NAME} demo brain.`;
+  const intro = readme
+    ? `<article>${addHeadingIds(rewriteLinks(marked.parse(stripLeadingH1(readme)), readmePath, KNOWN, REPO))}</article>`
+    : `<p class="lede">${escapeHtml(description)}</p>`;
   const bodyHtml = `${nav()}
 <nav class="crumbs wrap" aria-label="Breadcrumb"><a href="/">${escapeHtml(SITE_NAME)}</a> › ${escapeHtml(name)}</nav>
-<main id="main" class="wrap"><h1>${escapeHtml(name)}</h1><p class="lede">${escapeHtml(description)}</p>
-<ul class="card-grid">${cards}</ul></main>${foot()}`;
+<main id="main" class="wrap prose"><h1>${escapeHtml(name)}</h1>${intro}
+<h2>Notes in ${escapeHtml(titleCase(sec))}</h2><ul class="card-grid">${cards}</ul></main>${foot()}`;
   const listLd = {
     '@context': 'https://schema.org', '@type': 'CollectionPage', name, url: SITE_URL + urlForSection(sec), description,
     hasPart: secPaths.map((p) => ({ '@type': 'TechArticle', headline: titleOf(files[p], p), url: SITE_URL + urlForPath(p) })),
@@ -137,7 +150,7 @@ function renderSection(sec, secPaths) {
   };
   return htmlShell({
     title: `${name} — ${SITE_NAME}`, description, canonical: SITE_URL + urlForSection(sec),
-    base: SITE_URL, bodyHtml, jsonLd: [listLd, crumbLd],
+    base: SITE_URL, bodyHtml, modified: readme ? DATES[readmePath]?.modified : '', jsonLd: [listLd, crumbLd],
   });
 }
 
@@ -210,7 +223,7 @@ rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 
 for (const p of paths) {
-  if (p === 'README.md') continue;
+  if (p === 'README.md' || sectionReadmeOf(p)) continue; // landing / section hub
   const outPath = join(OUT, filePathFor(p));
   mkdirSync(dirname(outPath), { recursive: true });
   writeFileSync(outPath, renderNote(p));
@@ -218,16 +231,19 @@ for (const p of paths) {
 writeFileSync(join(OUT, 'index.html'), renderLanding());
 
 // Section hubs — real pages behind the breadcrumbs, plus internal-link hubs.
-for (const [sec, secPaths] of SECTIONS) {
+for (const sec of SECTIONS.keys()) {
   const outPath = join(OUT, filePathForSection(sec));
   mkdirSync(dirname(outPath), { recursive: true });
-  writeFileSync(outPath, renderSection(sec, secPaths));
+  writeFileSync(outPath, renderSection(sec, membersOf(sec)));
 }
 writeFileSync(join(OUT, '404.html'), renderNotFound());
 
 const sitemapEntries = [
+  // urlForPath already maps a section README onto '/<section>/', so only sections
+  // without one still need an explicit hub entry.
   ...paths.map((p) => ({ path: p, lastmod: DATES[p]?.modified })),
-  ...[...SECTIONS.keys()].map((sec) => ({ url: urlForSection(sec), priority: '0.5' })),
+  ...[...SECTIONS.keys()].filter((sec) => !files[`${sec}/README.md`])
+    .map((sec) => ({ url: urlForSection(sec), priority: '0.5' })),
 ];
 writeFileSync(join(OUT, 'sitemap.xml'), renderSitemap(sitemapEntries, SITE_URL));
 
@@ -256,15 +272,27 @@ for (const f of ['llms.txt', 'llms-full.txt']) {
 // Every internal link must resolve to something we actually wrote. A dead link
 // is a hard 404 for crawlers, so fail the build rather than ship it.
 const broken = [];
+const metaPages = [];
 for (const page of walkOut(OUT)) {
   if (!page.endsWith('.html')) continue;
-  for (const [, href] of readFileSync(page, 'utf8').matchAll(/href="(\/[^"#]*)"/g)) {
+  const html = readFileSync(page, 'utf8');
+  const rel = relative(OUT, page);
+  for (const [, href] of html.matchAll(/href="(\/[^"#]*)"/g)) {
     const hit = [join(OUT, href), join(OUT, `${href}.html`), join(OUT, href, 'index.html')].some(existsSync);
-    if (!hit) broken.push(`${relative(OUT, page)} → ${href}`);
+    if (!hit) broken.push(`${rel} → ${href}`);
+  }
+  // 404 is deliberately noindex, so its metadata isn't competing for anything.
+  if (rel !== '404.html') {
+    metaPages.push({
+      path: rel,
+      title: (html.match(/<title>([^<]*)<\/title>/) || [])[1] || '',
+      description: (html.match(/name="description" content="([^"]*)"/) || [])[1] || '',
+    });
   }
 }
-if (broken.length) {
-  console.error(`❌ ${broken.length} broken internal link(s):\n  ${broken.join('\n  ')}`);
+const problems = [...broken.map((b) => `broken link: ${b}`), ...metaProblems(metaPages)];
+if (problems.length) {
+  console.error(`❌ ${problems.length} problem(s):\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }
 
