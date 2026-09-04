@@ -268,6 +268,15 @@ export function metaProblems(pages) {
   return problems;
 }
 
+// Cloudflare Pages `_redirects`. A section README used to publish at
+// `/projects/README` and was listed in the sitemap, so those URLs may already be
+// indexed or linked; 301 them onto the hub rather than letting them 404 and
+// throwing away whatever ranking they had.
+export function renderRedirects(sections) {
+  const lines = [...sections].sort().map((sec) => `/${sec}/README ${urlForSection(sec)} 301`);
+  return lines.length ? `${lines.join('\n')}\n` : '';
+}
+
 // The full HTML document with SEO meta, Open Graph, Twitter, canonical, and any
 // JSON-LD blocks. `indexable=false` emits a noindex robots tag.
 export function htmlShell({ title, description, canonical, base, bodyHtml, jsonLd = [], ogImage = '/og.png', indexable = true, themeColor = '#0c0d12', ogType = 'website', feedUrl = '', modified = '' }) {

@@ -18,7 +18,7 @@ import { Resvg } from '@resvg/resvg-js';
 import { titleOf, sectionOf, graphData } from './public/lib.js';
 import {
   urlForPath, filePathFor, escapeHtml, metaDescription, pageTitle, rewriteLinks, stripLeadingH1,
-  renderRobots, renderHeaders, renderSitemap, breadcrumbJsonLd, articleJsonLd, htmlShell, metaProblems,
+  renderRobots, renderHeaders, renderSitemap, breadcrumbJsonLd, articleJsonLd, htmlShell, metaProblems, renderRedirects,
   urlForSection, filePathForSection, sectionGroups, renderFeed, addHeadingIds, tocHtml, sectionReadmeOf,
 } from './src/ssg.js';
 
@@ -257,6 +257,8 @@ writeFileSync(join(OUT, 'feed.xml'), renderFeed(feedItems, { base: SITE_URL, sit
 
 writeFileSync(join(OUT, 'robots.txt'), renderRobots(SITE_URL));
 writeFileSync(join(OUT, '_headers'), renderHeaders());
+const redirects = renderRedirects([...SECTIONS.keys()].filter((sec) => files[`${sec}/README.md`]));
+if (redirects) writeFileSync(join(OUT, '_redirects'), redirects);
 writeFileSync(join(OUT, 'og.png'), ogPng());
 copyFileSync(join(HERE, 'public-site.css'), join(OUT, 'site.css'));
 copyFileSync(join(HERE, 'public', 'brain.svg'), join(OUT, 'brain.svg'));

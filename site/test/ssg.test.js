@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   urlForPath, filePathFor, escapeHtml, metaDescription, pageTitle, rewriteLinks, stripLeadingH1,
   renderRobots, renderHeaders, renderSitemap, breadcrumbJsonLd, articleJsonLd, htmlShell,
-  urlForSection, filePathForSection, sectionGroups, renderFeed, addHeadingIds, tocHtml, sectionReadmeOf, metaProblems,
+  urlForSection, filePathForSection, sectionGroups, renderFeed, addHeadingIds, tocHtml, sectionReadmeOf, metaProblems, renderRedirects,
 } from '../src/ssg.js';
 
 const BASE = 'https://vbrain.example.com';
@@ -111,6 +111,15 @@ describe('rewriteLinks', () => {
   it('leaves the link alone when no repo URL is configured', () => {
     const out = rewriteLinks('<a href="site/README.md">d</a>', 'README.md', new Set(['README.md']), '');
     expect(out).toBe('<a href="site/README.md">d</a>');
+  });
+});
+
+describe('renderRedirects', () => {
+  it('301s the old section README URL onto the hub', () => {
+    expect(renderRedirects(['projects', 'ideas'])).toBe('/ideas/README /ideas/ 301\n/projects/README /projects/ 301\n');
+  });
+  it('is empty when no section has a README', () => {
+    expect(renderRedirects([])).toBe('');
   });
 });
 

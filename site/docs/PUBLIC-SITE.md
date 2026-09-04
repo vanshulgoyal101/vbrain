@@ -35,6 +35,7 @@ llms.txt              AI-crawler index (copied from the repo root)
 llms-full.txt         AI-crawler full text (copied from the repo root)
 robots.txt            allow all + sitemap reference + llms.txt pointer
 _headers              Cloudflare Pages security headers + asset caching
+_redirects            301s from the old /<section>/README URLs onto the hubs
 og.png                1200×630 social image (authored as SVG, rendered to PNG)
 site.css              public-site stylesheet
 brain.svg             favicon/logo
