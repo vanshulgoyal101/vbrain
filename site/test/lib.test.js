@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sectionOf, titleOf, resolvePath, sortPaths, matches, fold, tokenize, excerpt, highlight, slugify, backlinksFor, rankHits, graphData, suggestTargets, sectionBullets, parseQuery, editDistanceLE, escapeHtml, safeUrl, relativeTime } from '../public/lib.js';
+import { sectionOf, titleOf, resolvePath, sortPaths, matches, fold, tokenize, excerpt, highlight, slugify, backlinksFor, rankHits, graphData, suggestTargets, sectionBullets, parseQuery, editDistanceLE, escapeHtml, safeUrl, relativeTime, parseOAuthHash } from '../public/lib.js';
 
 describe('sectionOf', () => {
   it('returns folder or empty for root', () => {
@@ -247,6 +247,33 @@ describe('sectionBullets', () => {
   });
   it('caps the count', () => {
     expect(sectionBullets(md, 'Focus right now', 1)).toEqual(['**Primary bet:** PixelPaws']);
+  });
+});
+
+describe('parseOAuthHash', () => {
+  it('reads the token trio out of the callback fragment', () => {
+    expect(parseOAuthHash('#access_token=abc&refresh_token=r1&expires_at=1893456000')).toEqual({
+      access_token: 'abc', refresh_token: 'r1', expires_at: 1893456000,
+    });
+  });
+  it('works with or without the leading hash', () => {
+    expect(parseOAuthHash('access_token=abc').access_token).toBe('abc');
+  });
+  it('returns null when there is no access token to use', () => {
+    expect(parseOAuthHash('#/inbox')).toBeNull();
+    expect(parseOAuthHash('')).toBeNull();
+    expect(parseOAuthHash(null)).toBeNull();
+    expect(parseOAuthHash('#access_token=')).toBeNull(); // present but empty
+  });
+  it('defaults the optional fields rather than emitting NaN/undefined', () => {
+    expect(parseOAuthHash('#access_token=abc')).toEqual({
+      access_token: 'abc', refresh_token: null, expires_at: 0,
+    });
+    expect(parseOAuthHash('#access_token=abc&expires_at=soon').expires_at).toBe(0);
+  });
+  it('does not confuse a provider_access_token for the session token', () => {
+    // URLSearchParams.get matches the exact key, so this must not be picked up
+    expect(parseOAuthHash('#provider_access_token=xyz')).toBeNull();
   });
 });
 

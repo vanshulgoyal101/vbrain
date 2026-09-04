@@ -18,7 +18,7 @@ npm run test:coverage # coverage report
 
 | File | Covers |
 |------|--------|
-| `lib.test.js` | Frontend pure helpers + the **search engine**: fold, tokenize, matches, excerpt, highlight, rankHits (IDF/coverage/token-not-substring/diacritics), backlinks, suggestions, section bullets, and the shared `escapeHtml`/`safeUrl`/`relativeTime` helpers. |
+| `lib.test.js` | Frontend pure helpers + the **search engine**: fold, tokenize, matches, excerpt, highlight, rankHits (IDF/coverage/token-not-substring/diacritics), backlinks, suggestions, section bullets, and the shared `escapeHtml`/`safeUrl`/`relativeTime`/`parseOAuthHash` helpers. |
 | `search.test.js` | The worker/MCP-facing re-export surface behaves identically to the UI engine. |
 | `http.test.js` | `json()` + security headers, cookie parsing, base64url round-trip. |
 | `access.test.js` | JWT parse; `verifyAccess` happy path + every rejection (email, aud, exp, alg, unknown key, bad signature, malformed, no token, unconfigured, importKey failure); `getJwks` fetch/cache/refetch and the 502 when the key set is unreachable. |
@@ -31,7 +31,7 @@ npm run test:coverage # coverage report
 | `ssg.test.js` | Public-site generator: URLs, meta description, link rewriting, robots/headers/sitemap/feed, section hubs, heading ids + ToC, JSON-LD, the HTML shell. |
 | `helpers.js` | Shared test utilities (`makeTar`, `gzip`, `tarballFetch`) — not a suite. |
 
-Current: **208 tests, 11 files, all passing — 99% statement coverage.**
+Current: **253 tests, 12 files, all passing — 99% statement coverage.**
 
 ## How the crypto test works
 

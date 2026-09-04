@@ -1,6 +1,6 @@
 // Brain UI controller. Loads the whole brain in one authenticated request, then
 // renders markdown, navigation, search, backlinks, ToC, and the capture inbox.
-import { sectionOf, titleOf, resolvePath, sortPaths, matches, excerpt, highlight, slugify, backlinksFor, rankHits, graphData, suggestTargets, sectionBullets, escapeHtml, safeUrl, relativeTime } from './lib.js';
+import { sectionOf, titleOf, resolvePath, sortPaths, matches, excerpt, highlight, slugify, backlinksFor, rankHits, graphData, suggestTargets, sectionBullets, escapeHtml, safeUrl, relativeTime, parseOAuthHash } from './lib.js';
 
 const SECTION_LABEL = {
   '': 'Overview', career: 'Career', projects: 'Projects',
@@ -48,9 +48,9 @@ function saveSession(s) { SESSION = s; if (s) localStorage.setItem(SESSION_KEY, 
 // Supabase returns tokens in the URL hash after Google login; capture + clean it.
 function captureOAuthHash() {
   if (!location.hash.includes('access_token=')) return;
-  const p = new URLSearchParams(location.hash.slice(1));
-  const at = p.get('access_token');
-  if (at) saveSession({ access_token: at, refresh_token: p.get('refresh_token'), expires_at: Number(p.get('expires_at')) || 0 });
+  const session = parseOAuthHash(location.hash);
+  if (session) saveSession(session);
+  // Clear the fragment even when it was malformed, so no token stays in history.
   history.replaceState(null, '', location.pathname + location.search);
 }
 

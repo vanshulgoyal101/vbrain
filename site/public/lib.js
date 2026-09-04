@@ -313,6 +313,22 @@ export function graphData(files, resolve = resolvePath) {
   return { nodes, edges };
 }
 
+// Supabase returns tokens in the URL fragment after Google sign-in. Parse that
+// fragment into a session, or null when there is no usable access token — the
+// caller still clears the fragment either way so a token never lingers in history.
+export function parseOAuthHash(hash) {
+  const raw = String(hash || '').replace(/^#/, '');
+  if (!raw.includes('access_token=')) return null;
+  const p = new URLSearchParams(raw);
+  const accessToken = p.get('access_token');
+  if (!accessToken) return null;
+  return {
+    access_token: accessToken,
+    refresh_token: p.get('refresh_token') || null,
+    expires_at: Number(p.get('expires_at')) || 0,
+  };
+}
+
 // Escape for interpolation into HTML text *and* attribute values. Quotes are
 // escaped too, so `href="${escapeHtml(x)}"` can't be broken out of.
 export function escapeHtml(s) {
